@@ -1,0 +1,283 @@
+//
+//  AcademicFrontViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/9/14.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "AcademicFrontViewController.h"
+#import "AcadFrontTableView.h"
+#import "WebViewController.h"
+
+#define kFrontTag _selectedTableView-35
+
+@interface AcademicFrontViewController ()<UIScrollViewDelegate>
+{
+    NSInteger _selectedBtn;
+    NSInteger _selectedTableView;
+    UIView *_bottomView;
+    UIScrollView *_scrollView;
+    
+}
+
+@property (nonatomic,strong) NSMutableArray *dataSourse;
+
+@end
+
+@implementation AcademicFrontViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+
+    self.navigationController.navigationBar.hidden = NO;
+    self.automaticallyAdjustsScrollViewInsets = YES;
+    self.view.backgroundColor = kBackgroundColor;
+    self.title = @"学术前沿";
+    [self creatScViewHead];
+
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onPushWebView:) name:@"pushWebView" object:nil];
+    
+}
+
+
+-(void)creatScViewHead{
+    NSArray *arry = [[NSArray alloc]initWithObjects:@"科普文章",@"眼科资讯",@"学术会议",@"业界新闻", nil];
+    for (NSInteger i = 0; i<4; i++) {
+        
+        UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+        btn.frame = CGRectMake(((kWith-3)/4+1)*i, 64, (kWith-3)/4, 55);
+        btn.titleLabel.font = [UIFont systemFontOfSize:15];
+        btn.backgroundColor = [UIColor whiteColor];
+        [btn setTitle:arry[i] forState:UIControlStateNormal];
+        [btn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+        [btn setTitleColor:[UIColor colorWithRed:59/255.0 green:174/255.0 blue:218/255.0 alpha:1] forState:UIControlStateSelected];
+        btn.tag = i+30;
+        [btn addTarget:self action:@selector(onBtnClickFront:) forControlEvents:UIControlEventTouchUpInside];
+        [self.view addSubview:btn];
+        
+        if (i == 0) {
+            btn.selected = YES;
+            _selectedBtn = 30;
+            _bottomView  = [[UIView alloc]initWithFrame:CGRectMake(0,btn.frame.origin.y+btn.frame.size.height,btn.frame.size.width,2)];
+            _bottomView.backgroundColor = [UIColor colorWithRed:59/255.0 green:174/255.0 blue:218/255.0 alpha:1];
+            [self.view addSubview:_bottomView];
+        }
+    }
+    
+    _scrollView               = [[UIScrollView alloc]initWithFrame:CGRectMake(0, 64+55+2, kWith, kHeight-64-55-2)];
+    _scrollView.delegate      = self;
+    _scrollView.contentSize   = CGSizeMake(kWith*4, 0);
+    _scrollView.pagingEnabled = YES;
+    [self.view addSubview:_scrollView];
+
+    for (NSInteger i = 0; i<4; i++) {
+        AcadFrontTableView *front = [[AcadFrontTableView alloc]initWithFrame:CGRectMake(kWith*i, -1, kWith,_scrollView.frame.size.height ) style:UITableViewStyleGrouped];
+        front.tag = i+40;
+        [_scrollView addSubview:front];
+        
+        //上下拉刷新
+        front.mj_header = [MJRefreshNormalHeader headerWithRefreshingTarget:self refreshingAction:@selector(loadNewTop)];
+        //上提
+        front.mj_footer = [MJRefreshBackNormalFooter footerWithRefreshingTarget:self refreshingAction:@selector(loadMoreData)];
+        
+        if (i == 0) {
+            
+            _selectedTableView = 40;
+            [self getTableviewDataAndPage:@(1) andRow:@(10) andUPorDown:YES AcadFront:front Type:[NSString stringWithFormat:@"%ld",kFrontTag]];
+            
+        }
+    }
+    
+}
+
+
+-(void)onBtnClickFront:(UIButton *)btn{
+    
+    UIButton *selectedBtn = [self.view viewWithTag:_selectedBtn];
+    selectedBtn.selected  = NO;
+    btn.selected          = YES;
+    _selectedBtn = btn.tag;
+    [UIView beginAnimations:nil context:nil];
+    [UIView setAnimationDuration:0.2];
+    _bottomView.frame =CGRectMake(btn.frame.origin.x,btn.frame.origin.y+btn.frame.size.height,btn.frame.size.width,2);
+    [UIView commitAnimations];
+    _selectedTableView = btn.tag +10;
+
+    [_scrollView setContentOffset:CGPointMake((btn.tag-30)*kWith, 0) animated:YES];
+    
+    AcadFrontTableView *selectedFront = [self.view viewWithTag:_selectedTableView];
+    [self getTableviewDataAndPage:@(1) andRow:@(10) andUPorDown:YES AcadFront:selectedFront Type:[NSString stringWithFormat:@"%ld",kFrontTag]];
+
+}
+
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView{
+    
+    NSInteger select = scrollView.contentOffset.x/kWith+30;
+    UIButton *selectedBtn = [self.view viewWithTag:select];
+    UIButton *oldBtn= [self.view viewWithTag:_selectedBtn];
+    [UIView beginAnimations:nil context:nil];
+    [UIView setAnimationDuration:0.2];
+    _bottomView.frame =CGRectMake(selectedBtn.frame.origin.x,selectedBtn.frame.origin.y+selectedBtn.frame.size.height,selectedBtn.frame.size.width,2);
+    [UIView commitAnimations];
+    selectedBtn.selected = YES;
+    oldBtn.selected = NO;
+    _selectedBtn = select;
+    _selectedTableView = select +10;
+    
+    AcadFrontTableView *selectedFront = [self.view viewWithTag:_selectedTableView];
+    [self getTableviewDataAndPage:@(1) andRow:@(10) andUPorDown:YES AcadFront:selectedFront Type:[NSString stringWithFormat:@"%ld",kFrontTag]];
+}
+
+//上提
+-(void)loadMoreData{
+    
+    AcadFrontTableView *selectedFront = [self.view viewWithTag:_selectedTableView];
+    [self getTableviewDataAndPage:@(1) andRow:@(10) andUPorDown:NO AcadFront:selectedFront Type:[NSString stringWithFormat:@"%ld",kFrontTag]];
+
+};
+
+//上下拉刷新
+-(void)loadNewTop{
+    
+    AcadFrontTableView *selectedFront = [self.view viewWithTag:_selectedTableView];
+    [self getTableviewDataAndPage:@(1) andRow:@(10) andUPorDown:YES AcadFront:selectedFront Type:[NSString stringWithFormat:@"%ld",kFrontTag]];
+    
+};
+
+#pragma mark   获取数据
+-(void)getTableviewDataAndPage:(NSNumber*)Page andRow:(NSNumber*)Row andUPorDown:(BOOL)Up AcadFront:(AcadFrontTableView *)front Type:(NSString *)type
+{
+    static NSInteger page = 1;
+    
+    //获取verifyCode
+    //获取已添加页面的数据
+    NSUserDefaults *userDefaults=[NSUserDefaults standardUserDefaults];
+    
+    //HEAD
+    NSDictionary *heads=@{RESPONSE_KEY_VERIFYCODE:[userDefaults objectForKey:@"verifyCode"]};
+    //BODY
+    NSMutableDictionary *parameters=[[NSMutableDictionary alloc]init];
+    if (Up==YES)
+    {
+        page = 1;
+        [front.mj_footer resetNoMoreData];
+        [parameters setObject:[NSString stringWithFormat:@"%ld",page] forKey:@"page"];
+        front.arryData = [[NSMutableArray alloc]init];
+    }
+    else
+    {
+        page ++;
+        [parameters setObject:[NSString stringWithFormat:@"%ld",page] forKey:@"page"];
+    }
+    
+    [parameters setObject:Row forKey:@"rows"];
+    [parameters setObject:@"1" forKey:@"overType"];
+    [parameters setObject:type forKey:@"type"];
+    [parameters setObject:@"" forKey:@"name"];
+    [parameters setObject:@"" forKey:@"editorName"];
+    
+    [RequestManager postWithURLString:GETEYEFRONTIERLIST heads:heads parameters:parameters success:^(id responseObject) {
+        if (responseObject[@"rows"] == nil||[responseObject[@"rows"] count]==0) {
+            if (Up==NO) {
+                [front.mj_footer endRefreshingWithNoMoreData];
+            }else
+            {
+                [front.mj_header endRefreshing];
+                self.noData.frame = CGRectMake(0, (kHeight)/2, kWith, 60);
+                self.noData.hidden = NO;
+            }
+        }else{
+            self.noData.hidden = YES;
+            NSMutableArray *arrCom = [[NSMutableArray alloc]init];
+            //初始数据书否为空
+            if (front.arryData==nil)
+            {
+                front.arryData = responseObject[@"rows"];
+            }
+            else
+            {
+                if (Up==YES)
+                {
+                    front.arryData = responseObject[@"rows"];
+                }
+                else
+                {
+                    arrCom = responseObject[@"rows"];
+                    NSMutableArray *add = [NSMutableArray arrayWithArray:front.arryData];
+                    for (NSMutableDictionary*dic in arrCom)
+                    {
+                        [add addObject:dic];
+                    }
+                    front.arryData = [NSMutableArray arrayWithArray:add];
+                }
+            }
+            //是否最后一条数据
+            
+            [front reloadData];
+            
+            //是上提还是下拉
+            if (Up==YES)
+            {
+                [front.mj_header endRefreshing];
+            }
+            else
+            {
+                [front.mj_footer endRefreshing];
+            }
+        }
+        
+    } failure:^(NSError *error) {
+        if (Up==YES)
+        {
+            [front.mj_header endRefreshing];
+        }
+        else
+        {
+            [front.mj_footer endRefreshing];
+        }
+        
+    }];
+}
+
+#pragma mark   页面跳转
+-(void)onPushWebView:(NSNotification *)notify{
+
+    NSDictionary *Urldic = notify.object;
+    NSURL *urlStr=Urldic[@"url"];
+    WebViewController *webViewcontroller=[[WebViewController alloc]init];
+    if (_selectedTableView == 40) {
+        webViewcontroller.title = @"科普文章";
+    }
+    else if (_selectedTableView == 41){
+        webViewcontroller.title = @"眼科资讯";
+    }
+    else if (_selectedTableView == 42){
+        webViewcontroller.title = @"学术会议";
+    }
+    else if (_selectedTableView == 43){
+        webViewcontroller.title = @"业界新闻";
+    }
+    webViewcontroller.urlStr = urlStr;
+    webViewcontroller.isCollectisShow = YES;
+    webViewcontroller.CollectID = Urldic[@"newsId"];
+    webViewcontroller.CollectTitle = Urldic[@"newsTitle"];
+    [self.navigationController pushViewController:webViewcontroller animated:YES];
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

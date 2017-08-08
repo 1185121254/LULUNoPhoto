@@ -1,0 +1,365 @@
+//
+//  AddSchedTableViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/5/11.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "AddSchedTableViewController.h"
+#import "AddSchedTableViewCell.h"
+#import "ScheduleTableViewController.h"
+#import "PhoneModel.h"
+
+@interface AddSchedTableViewController ()<UITableViewDelegate,UITableViewDataSource,BaseDatePickerDelegate,BasePickerViewDelegate>
+{
+    UITableView *_tableView;
+    NSMutableArray *_arryData;
+    NSMutableArray *_arryPickView;
+    
+    UIDatePicker *_datePicker;
+    UIPickerView *_picker;
+    UIView *_viewBottom;
+    
+    NSInteger _selectedRow;
+    NSDateFormatter *_formatter;
+    
+    BaseDatePickerViewController *_basePicker;
+    BasePickerView *_basePickerView;
+}
+@end
+
+@implementation AddSchedTableViewController
+
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"添加";
+    self.view.backgroundColor = [UIColor whiteColor];
+    
+    _arryPickView = [NSMutableArray array];
+    _arryData = [NSMutableArray array];
+
+    [self clearUpData];
+    
+    UIBarButtonItem *right = [[UIBarButtonItem alloc]initWithTitle:@"确定" style:UIBarButtonItemStylePlain target:self action:@selector(onRight)];
+    self.navigationItem.rightBarButtonItem = right;
+    
+    for (NSInteger  i = 0; i<40; i++) {
+        [_arryPickView addObject:[NSString stringWithFormat:@"%ld",i+1]];
+    }
+    
+    _tableView = [[UITableView alloc]initWithFrame:CGRectMake(0, 0, kWith, kHeight) style:UITableViewStyleGrouped];
+    _tableView.dataSource = self;
+    _tableView.delegate = self;
+    _tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    [self.view addSubview:_tableView];
+    [_tableView registerClass:[AddSchedTableViewCell class] forCellReuseIdentifier:@"addSched"];
+
+    _basePicker = [[BaseDatePickerViewController alloc]initWithModel:0];
+    _basePicker.delegate = self;
+    [self.view addSubview:_basePicker];
+    
+    _basePickerView  = [[BasePickerView alloc]init];
+    _basePickerView.delegate = self;
+    [self.view addSubview:_basePickerView];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onNotifyReduce:) name:@"reduceSched" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onNotifyCount:) name:@"Countt" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onNotifyTime:) name:@"Timee" object:nil];
+}
+
+-(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return 1;
+}
+
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return _arryData.count;
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 40;
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    return 170;
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return 50;
+}
+
+-(UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+
+    UIView *view = [[UIView alloc]initWithFrame:CGRectMake(0, 0, kWith, 20)];
+    
+    UILabel *lblTime = [[UILabel alloc]initWithFrame:CGRectMake(20, 0, 100, 40)];
+    lblTime.font = [UIFont systemFontOfSize:13];
+    lblTime.text = @"开始就诊时间：*";
+    [view addSubview:lblTime];
+    
+    UILabel *lblCount = [[UILabel alloc]initWithFrame:CGRectMake(130, 0, 100, 40)];
+    lblCount.font = [UIFont systemFontOfSize:13];
+    lblCount.text = @"就诊数量：*";
+    [view addSubview:lblCount];
+    
+    return view;
+}
+
+-(UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section{
+    UIView *view = [[UIView alloc]initWithFrame:CGRectMake(0, 0, kWith, 20)];
+    
+    UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+    btn.frame = CGRectMake(40, 15, kWith-80, 30);
+    btn.backgroundColor = [UIColor whiteColor];
+    btn.layer.borderWidth = 1;
+    btn.layer.borderColor = [BLUECOLOR_STYLE CGColor];
+    [btn addTarget:self action:@selector(onBtnAdd) forControlEvents:UIControlEventTouchUpInside];
+    btn.titleLabel.font = [UIFont systemFontOfSize:20];
+    [btn setTitle:@"+  添加时间段" forState:UIControlStateNormal];
+    [btn setTitleColor:BLUECOLOR_STYLE forState:UIControlStateNormal];
+    [view addSubview:btn];
+    
+    UILabel *lblMess = [[UILabel alloc]initWithFrame:CGRectMake(20, 70, kWith-40, 100)];
+    lblMess.font = [UIFont systemFontOfSize:12];
+    lblMess.numberOfLines = 0;
+    lblMess.text = @"温馨提示：\n 1.每个患者的就诊时间间隔30分钟，设置开始就诊时间、就诊数量后系统会进一步自动计算。\n 2.患者购买成功后会有相应短信提示您，到达预约时间前30分钟，系统会再次发送短信提示，请注意接听。";
+    [view addSubview:lblMess];
+    return view;
+}
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    AddSchedTableViewCell *cell  = [tableView dequeueReusableCellWithIdentifier:@"addSched" forIndexPath:indexPath];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    [_formatter setDateFormat:@"HH:mm"];
+    NSDictionary *dic = _arryData[indexPath.row];
+    cell.lblTime.text = [dic objectForKey:@"time"];
+    cell.lblCount.text = [NSString stringWithFormat:@"%ld",[[dic objectForKey:@"count"] integerValue]];
+
+    return cell;
+}
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    [_tableView deselectRowAtIndexPath:indexPath animated:YES];
+}
+
+#pragma mark-------获取数据
+
+-(void)clearUpData{
+    
+    NSMutableDictionary *dic = [[NSMutableDictionary alloc]init];
+    long long timeValue = 0;
+     _formatter= [[NSDateFormatter alloc]init];
+    [_formatter setDateFormat:@"HH:mm"];
+    for (PhoneModel *phone in self.arryDataSourceAdd) {
+        if (dic.count == 0) {
+            NSDate *date = [_formatter dateFromString:phone.dutyTime];
+            NSMutableArray *arr = [[NSMutableArray alloc]init];
+            [arr addObject:date];
+            [dic setObject:arr forKey:@"1"];
+        }
+        else{
+            NSDate *date = [_formatter dateFromString:phone.dutyTime];
+            long long timeNext = [date timeIntervalSince1970];
+            if (timeNext - timeValue == 30 * 60) {
+                
+                NSString *key = [[dic allKeys] lastObject];
+                NSMutableArray *nextArr = [dic objectForKey:key];
+                [nextArr addObject:date];
+                
+            }
+            else
+            {
+                NSString *nextKey = [NSString stringWithFormat:@"%ld",[dic count]+1];
+                NSMutableArray *lastArr = [[NSMutableArray alloc]init];
+                [lastArr addObject:[_formatter dateFromString:phone.dutyTime]];
+                [dic setObject:lastArr forKey:nextKey];
+            }
+            
+        }
+        NSDate *dateNext1 = [_formatter dateFromString:phone.dutyTime];
+        timeValue = [dateNext1 timeIntervalSince1970];
+        
+    }
+    
+    for (NSString *key in [dic allKeys]) {
+        
+        NSArray *arryVAlue = [dic objectForKey:key];
+        NSMutableDictionary *dicValue = [NSMutableDictionary dictionary];
+        NSDate *datea = arryVAlue[0];
+        [dicValue setObject:[_formatter stringFromDate:datea] forKey:@"time"];
+        [dicValue setObject:@(arryVAlue.count) forKey:@"count"];
+        [_arryData addObject:dicValue];
+    }
+    
+}
+
+#pragma mark-------右按钮项
+-(void)onRight{
+    
+    for (NSInteger i = 0; i<_arryData.count; i++) {
+        NSDictionary *dic = _arryData[i];
+        NSInteger count = [[dic objectForKey:@"count"] integerValue];
+        if (count == 0 || [dic objectForKey:@"time"] == nil ||[[dic objectForKey:@"time"] isEqualToString:@""]) {
+            kAlter(@"数量为空或设置时间为空");
+            return;
+        }
+    }
+
+    
+    NSMutableArray *arrry = [NSMutableArray array];
+    [arrry addObjectsFromArray:_arryData];
+    if (_arryData.count > 0) {
+        for (NSInteger i = 0; i< _arryData.count; i++) {
+            NSDictionary *dic = _arryData[i];
+            NSString *str = [dic objectForKey:@"time"];
+            NSDate *dateMin = [_formatter dateFromString:str];
+            long long Min = [dateMin timeIntervalSince1970];
+            NSInteger count = [[dic objectForKey:@"count"] integerValue];
+            long long unitflages = count * 30 *60 ;
+            long long Max = Min + unitflages;
+            
+            for (NSInteger k = 0; k < arrry.count; k++) {
+                if (i != k) {
+                    NSDictionary *dic = arrry[k];
+                    NSString *str1 = [dic objectForKey:@"time"];
+                    NSDate *date = [_formatter dateFromString:str1];
+                    if (date != nil) {
+                        long long now = [date timeIntervalSince1970];
+                        if (now >= Min && now <= Max) {
+                            UIAlertController *alter = [UIAlertController alertControllerWithTitle:@"提示" message:[NSString stringWithFormat:@"第%ld个时间安排与第%ld个时间安排有冲突",i+1,k+1] preferredStyle:UIAlertControllerStyleAlert];
+                            [alter addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleCancel handler:nil]];
+                            [self presentViewController:alter animated:YES completion:nil];
+                            return;
+                        }
+                        
+                    }
+                    
+                }
+                
+            }
+            
+        }
+        
+    }
+    
+    NSMutableArray *arrySchedule = [NSMutableArray array];
+    for (NSInteger i = 0; i < _arryData.count; i++) {
+        NSDictionary *dic = _arryData[i];
+        NSInteger count = [[dic objectForKey:@"count"] integerValue];
+        NSString *str= [dic objectForKey:@"time"];
+        NSDate *date = [_formatter dateFromString:str];
+        long long nowtime = [date timeIntervalSince1970];
+        [arrySchedule addObject:[dic objectForKey:@"time"]];
+
+        for (NSInteger k = 0; k< count - 1; k ++) {
+            long long addtime = (k+1) * 30 * 60;
+            long long nowDate = nowtime + addtime;
+            NSDate *date1 = [NSDate dateWithTimeIntervalSince1970:nowDate];
+            [arrySchedule addObject:[_formatter stringFromDate:date1]];
+        }
+    }
+
+    
+    NSMutableDictionary *paramts = [NSMutableDictionary dictionary];
+    [paramts setObject:[kUserDefatuel objectForKey:@"id"] forKey:@"doctorId"];
+    [paramts setObject:@([self.week integerValue]) forKey:@"week"];
+    [paramts setObject:arrySchedule forKey:@"dutyList"];
+    MBProgressHUD *HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    HUD.mode = MBProgressHUDModeIndeterminate;
+    HUD.labelText = @"正在加载";
+    HUD.hidden = NO;
+    [RequestManager setRoster:[NSString stringWithFormat:@"%@/api/Share/VasDutyRosterSet",NET_URLSTRING] parameters:paramts Complation:^(NSNumber *mess) {
+        HUD.hidden = YES;
+        if ([mess integerValue] == 10000) {
+            UIAlertController *alter = [UIAlertController alertControllerWithTitle:@"提示" message:@"提交成功" preferredStyle:UIAlertControllerStyleAlert];
+            [alter addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+            [alter addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+                [self.navigationController popViewControllerAnimated:YES];
+            }]];
+            [self presentViewController:alter animated:YES completion:nil];
+        }
+        else
+        {
+            kAlter(@"提交失败");
+        }
+
+    } Fail:^(NSError *error) {
+        HUD.hidden = YES;
+        kAlter(@"提交失败");
+    }];
+}
+
+#pragma mark-------通知
+
+-(void)onBtnAdd{
+    NSMutableDictionary *dic =[[NSMutableDictionary alloc]init];
+    [dic setObject:@"00:00" forKey:@"time"];
+    [dic setObject:@(1) forKey:@"count"];
+    [_arryData addObject:dic];
+    [_tableView reloadData];
+}
+
+-(void)onNotifyReduce:(NSNotification *)notify{
+    
+    AddSchedTableViewCell *cell = notify.object;
+    NSIndexPath *index = [_tableView indexPathForCell:cell];
+
+    UIAlertController *alter = [UIAlertController alertControllerWithTitle:@"提示" message:[NSString stringWithFormat:@"您确定要删除第%ld行",index.row +1] preferredStyle:UIAlertControllerStyleAlert];
+    [alter addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+    [alter addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [_arryData removeObjectAtIndex:index.row];
+        [_tableView deleteRowsAtIndexPaths:@[index] withRowAnimation:UITableViewRowAnimationFade];
+    }]];
+    [self presentViewController:alter animated:YES completion:nil];
+}
+
+#pragma mark------时间选择器
+-(void)onNotifyTime:(NSNotification *)notify{
+    AddSchedTableViewCell *cell  =  notify.object;
+    NSIndexPath *index = [_tableView indexPathForCell:cell];
+    _selectedRow = index.row + 590;
+    [_basePicker datePickerShow:nil MinDate:nil];
+}
+
+-(void)setDateFromDatePicker:(NSDate *)date{
+    NSMutableDictionary *dic = _arryData[_selectedRow - 590];
+    [dic setObject:[_formatter stringFromDate:date]forKey:@"time"];
+    [_tableView reloadData];
+}
+#pragma mark------PickView
+-(void)onNotifyCount:(NSNotification *)notify{
+    AddSchedTableViewCell *cell  =  notify.object;
+    NSIndexPath *index = [_tableView indexPathForCell:cell];
+    _selectedRow = index.row + 590;
+    NSMutableArray *arry = [NSMutableArray array];
+    [arry addObject:_arryPickView];
+    [_basePickerView pickerDelegateShow:arry];
+}
+
+-(void)setPicker:(NSString *)count{
+    NSMutableDictionary *dic = _arryData[_selectedRow - 590];
+    [dic setValue:@([count integerValue]) forKey:@"count"];
+    [_tableView reloadData];
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+-(void)dealloc{
+    
+    [[NSNotificationCenter defaultCenter]removeObserver:self];
+    
+}
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

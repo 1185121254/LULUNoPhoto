@@ -1,0 +1,81 @@
+//
+//  ToolCollectionViewCell.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/9/12.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "ToolCollectionViewCell.h"
+
+@implementation ToolCollectionViewCell
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    
+    _imageViewTool.contentMode = UIViewContentModeCenter;
+    if (kWith  == 320) {
+        
+        _lableTool.font = [UIFont systemFontOfSize:14];
+        
+    }else
+    {
+        _lableTool.font = [UIFont systemFontOfSize:15];
+
+    }
+    
+}
+
+-(void)toolDoctor:(NSIndexPath *)index{
+
+    switch (index.item) {
+        case 0:
+        {
+            _imageViewTool.image = [UIImage imageNamed:@"g1"];
+            _lableTool.text = @"眼科检查";
+        }
+            break;
+        case 1:
+        {
+            _imageViewTool.image = [UIImage imageNamed:@"g2"];
+            _lableTool.text = @"眼科常用正常值";
+        }
+            break;
+        case 2:
+        {
+            _imageViewTool.image = [UIImage imageNamed:@"g3"];
+            _lableTool.text = @"眼科常用药品";
+        }
+            break;
+        case 3:
+        {
+            _imageViewTool.image = [UIImage imageNamed:@"g-4"];
+            _lableTool.text = @"眼科常用计算";
+        }
+            break;
+        case 4:
+        {
+            _imageViewTool.image = [UIImage imageNamed:@"g5"];
+            _lableTool.text = @"眼科常用英文";
+        }
+            break;
+        case 5:
+        {
+            _imageViewTool.image = [UIImage imageNamed:@"g6"];
+            _lableTool.text = @"人工晶体";
+        }
+            break;
+        case 6:
+        {
+            _imageViewTool.image = [UIImage imageNamed:@"g6"];
+            _lableTool.text = @"眼科文献";
+        }
+            break;
+        default:
+            break;
+    }
+    
+}
+
+
+@end

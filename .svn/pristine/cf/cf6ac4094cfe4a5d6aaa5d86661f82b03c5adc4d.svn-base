@@ -1,0 +1,732 @@
+//
+//  OutPatienrRecordViewController.m
+//  HuaxiaDotor
+//
+//  Created by kock on 16/3/18.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "OutPatienrRecordViewController.h"
+#import "MyPatientsTableViewCell.h"
+#import "MJRefresh.h"
+#import "NewPatientScViewController.h"
+//#import "AddPatientTableViewController.h"
+//#import "PatientModel.h"
+//#import "NewPientClipViewController.h"
+
+@interface OutPatienrRecordViewController ()<UITableViewDelegate,UITableViewDataSource>
+
+//预约按钮
+@property (weak, nonatomic) IBOutlet UIButton *bespeakBtn;
+//已就诊按钮
+@property (weak, nonatomic) IBOutlet UIButton *treatBtn;
+//按钮上的指示条
+@property (strong, nonatomic) UIView *btnViewSelect1,*btnViewSelect2;
+//用户ID和verifyCode
+@property (strong, nonatomic) NSString *userID,*verifyCode;
+//数据展示页面的页数和行数
+//@property (assign, nonatomic) int pages, rows;
+//获取数据的具体日期
+@property (strong, nonatomic) NSString *txtAppDate;
+//预约状态(1:预约2:已就诊)
+@property (assign, nonatomic) int yesOrNo;
+//查看日历按钮
+@property (weak, nonatomic) IBOutlet UIButton *seachDaysBtn;
+//日期显示view
+@property (weak, nonatomic) IBOutlet UIView *dayInView;
+//患者表格视图
+@property (weak, nonatomic) IBOutlet UITableView *patientCell;
+
+//获取下载病人数组数据
+@property (strong, nonatomic)NSMutableArray *dataArr;
+//获取需要展示的数组
+//@property (strong, nonatomic)NSMutableArray *showArr;
+
+//当前数组的显示数组的位置  总数组的个数  当前数组显示的个数
+@property (assign, nonatomic)int NowTag,CountTag,NowShow;
+//选择按钮的tag值
+@property (assign, nonatomic)int tagForBtn;
+//今日日期
+@property (strong, nonatomic)NSString *todyDate;
+//按钮上的日期数组
+@property (strong, nonatomic)NSMutableArray *dayinButton;
+//获取用户的数组信息
+//@property (strong, nonatomic)NSMutableArray *userDataArr;
+
+@end
+
+
+@implementation OutPatienrRecordViewController
+
+//
+//@synthesize delegate;
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    self.navigationController.navigationBar.hidden = NO;
+
+    if (![self.from isEqualToString:@"Home"]) {
+        [self fromNoHome];
+    }
+    self.from = nil;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    self.navigationController.navigationBar.hidden=NO;
+    //导航栏标题的颜色
+    [self.navigationController.navigationBar setTitleTextAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:19],NSForegroundColorAttributeName:[UIColor whiteColor]}];
+    self.title=@"门诊记录";
+//    self.patientCell.backgroundColor = [UIColor redColor];
+//    self.view.backgroundColor = [UIColor yellowColor];
+//    self.bespeakBtn.backgroundColor =[ UIColor purpleColor];
+//    self.treatBtn.backgroundColor = [UIColor greenColor];
+    
+    //创建nib
+    [self createTableCellXib];
+    
+    //下拉上提刷新
+    [self createRefreshTableView];
+    
+    //进入页面是初始化按钮标题
+    [self DaysButtonInfo];
+    //按钮表示器
+    [self createButtonViewSelect];
+    
+    //获取verifyCode 和 ID
+    //获取已添加页面的数据
+    NSUserDefaults *userDefaults=[NSUserDefaults standardUserDefaults];
+    //获取用户秘钥
+    self.verifyCode=[userDefaults objectForKey:@"verifyCode"];
+    //获取用户ID
+    self.userID=[userDefaults objectForKey:@"id"];
+    
+    //进入时获取预约数据
+    self.tagForBtn=1;
+    self.todyDate=[NSString stringWithFormat:@"%@",[NSDate date]];
+    [self getPatienerdata:self.todyDate];
+    [_bespeakBtn setTitleColor:BLUECOLOR_STYLE forState:UIControlStateNormal];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onAddBtnPatient:) name:@"addPatient_Cell" object:nil];
+    
+}
+
+#pragma mark - 门诊记录表格页面
+
+//载入xib
+-(void)createTableCellXib
+{
+    //创建nib文件
+    UINib *nib=[UINib nibWithNibName:@"MyPatients" bundle:[NSBundle mainBundle]];
+    //注册试图
+    [self.patientCell registerNib:nib forCellReuseIdentifier:@"MyPatients"];
+    //设置页面的代理
+    self.patientCell.delegate=self;
+    self.patientCell.dataSource=self;
+}
+
+#pragma mark - Table View delegate
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    //设置cellID
+    MyPatientsTableViewCell *cell=[tableView dequeueReusableCellWithIdentifier:@"MyPatients" forIndexPath:indexPath];
+    cell.selectionStyle=NO;
+    //设置cell值
+    //预约
+    if (self.tagForBtn==1)
+    {
+        cell.TimeLbl.text = @"预约时间";
+        [cell setCellPatient:self.dataArr[indexPath.row] andBtnHidden:YES];
+    }
+    //就诊
+    else if(self.tagForBtn==2)
+    {
+        cell.TimeLbl.text = @"就诊时间";
+        if (self.dataArr.count != 0) {
+            [cell setCellPatient:self.dataArr[indexPath.row] andBtnHidden:NO];
+
+        }
+    }
+    return cell;
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return 100;
+}
+
+#pragma mark - Table view data source
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    return self.dataArr.count;
+}
+
+#pragma mark 已就诊的点击cell事件
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(nonnull NSIndexPath *)indexPath
+{
+
+}
+
+-(void)onAddBtnPatient:(NSNotification *)notify{
+
+    MyPatientsTableViewCell *cell = notify.object;
+    NSIndexPath *index = [self.patientCell indexPathForCell:cell];
+    
+    //已就诊的时候能点击
+    if (self.tagForBtn==2)
+    {
+        
+        [self.btnViewSelect1 removeFromSuperview];
+        [self.btnViewSelect2 removeFromSuperview];
+        
+        NewPatientScViewController *new = [[NewPatientScViewController alloc]init];
+        new.dicData = self.dataArr[index.row];
+        [self.navigationController pushViewController:new animated:YES];
+
+    }
+}
+
+#pragma mark - 上下拉数据刷新
+-(void)createRefreshTableView
+{
+    // 设置回调（一旦进入刷新状态，就调用target的action，也就是调用self的loadNewData方法）
+    self.patientCell.mj_header = [MJRefreshNormalHeader headerWithRefreshingTarget:self refreshingAction:@selector(loadNewData)];
+    // 马上进入刷新状态
+//    [self.patientCell.header beginRefreshing];
+    
+    //上提刷新
+//    self.patientCell.mj_footer = [MJRefreshBackNormalFooter footerWithRefreshingTarget:self refreshingAction:@selector(loadMoreData)];
+}
+
+-(void)dealloc{
+
+}
+
+//下拉刷新
+-(void)loadNewData
+{
+//    NSLog(@"刷新数据");
+    //获取
+    [self getPatienerdata:self.todyDate];
+    //刷新表格数据
+    [self.patientCell reloadData];
+    [self.patientCell.mj_header endRefreshing];
+}
+
+////上提刷新
+//-(void)loadMoreData
+//{
+//    [self.patientCell.mj_footer endRefreshing];
+//    //结束刷新状态
+//    [self.patientCell.header endRefreshing];
+//    //获取
+//    [self showArrCutForDataArr];
+//    //刷新表格数据
+//    [self.patientCell reloadData];
+//}
+
+
+
+//默认的按钮中的日期
+-(void)DaysButtonInfo
+{
+    NSDate *todyDate=[NSDate date];
+    [self dateForButtonTitle:todyDate];
+}
+
+#pragma mark - 预约按钮
+- (IBAction)bespeak:(UIButton *)sender
+{
+    [self.bespeakBtn addSubview:self.btnViewSelect1];
+    [self.btnViewSelect2 removeFromSuperview];
+    self.tagForBtn=1;
+    [_bespeakBtn setTitleColor:BLUECOLOR_STYLE forState:UIControlStateNormal];
+    [_treatBtn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    //获取预约数据
+    self.dataArr=[[NSMutableArray alloc]init];//重置数据
+//    self.showArr=[[NSMutableArray alloc]init];
+    //调用把需要展示的数组存进展示数组中
+    [self getPatienerdata:self.todyDate];
+}
+
+
+#pragma mark - 已就诊按钮
+- (IBAction)treat:(UIButton *)sender
+{
+    [self.treatBtn addSubview:self.btnViewSelect2];
+    [self.btnViewSelect1 removeFromSuperview];
+    self.tagForBtn=2;
+    [_bespeakBtn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    [_treatBtn setTitleColor:BLUECOLOR_STYLE forState:UIControlStateNormal];
+    //获取就诊患者数据
+    self.dataArr=[[NSMutableArray alloc]init];//重置数据
+//    self.showArr=[[NSMutableArray alloc]init];
+    //获取当天数据
+    [self getPatienerdata:self.todyDate];
+}
+
+#pragma mark - 获取已就诊或预约患者数据
+-(void)getPatienerdata:(NSString *)selectDay
+{
+    //HEAD
+    NSDictionary *heads=@{RESPONSE_KEY_VERIFYCODE:[kUserDefatuel objectForKey:@"verifyCode"]};
+    //BODY
+    NSMutableDictionary *parameters=[[NSMutableDictionary alloc]init];
+    //设置需要上传的字典数据
+    //日期
+    self.txtAppDate=[NSString stringWithFormat:@"%@",selectDay];
+    [parameters setObject:self.txtAppDate forKey:@"queryDate"];
+    //设置请求的数据类型,是否预约
+    self.yesOrNo=self.tagForBtn;
+    [parameters setObject:[NSString stringWithFormat:@"%d", self.yesOrNo] forKey:@"type"];
+    //ID
+    [parameters setObject:self.userID forKey:@"docCode"];
+    
+    [RequestManager postWithURLString:OUTPATIENTS heads:heads parameters:parameters success:^(id responseObject)
+     {
+//         [showAlertView showAlertViewWithMessage:@"成功获取"];
+         
+         //获取数组存入总数组中
+         self.dataArr=responseObject;
+         if (self.dataArr.count == 0 || self.dataArr == nil)
+         {
+             [_patientCell.mj_header endRefreshing];
+             
+             CGRect frame = self.noData.frame;
+             frame.size.height = (kHeight-60) / 3*2;
+             self.noData.frame = frame;
+             [self.view sizeToFit];
+             
+             self.noData.hidden = NO;
+         }
+         else
+         {
+             self.noData.hidden = YES;
+         }
+         
+//         NSLog(@"总数组%@",self.dataArr);
+         //刷新表格数据
+         [self.patientCell reloadData];
+     } failure:^(NSError *error)
+     {
+         [showAlertView showAlertViewWithMessage:[NSString stringWithFormat:@"%@",error]];
+     }];
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section
+{
+    return 0.01;
+}
+-(CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section
+{
+    return 0.01;
+}
+
+
+#pragma mark - 给选择按钮添加指示器
+-(void)createButtonViewSelect
+{
+    self.btnViewSelect1=[[UIView alloc]initWithFrame:CGRectMake(0,self.bespeakBtn.frame.size.height-2,kWith/2-1, 2)];
+    self.btnViewSelect1.backgroundColor=BLUECOLOR_STYLE;
+    
+    self.btnViewSelect2=[[UIView alloc]initWithFrame:CGRectMake(0, self.treatBtn.frame.size.height-2,kWith/2-1, 2)];
+    self.btnViewSelect2.backgroundColor=BLUECOLOR_STYLE;
+
+    //添加到按钮上
+    //默认第一个
+    [self.bespeakBtn addSubview:self.btnViewSelect1];
+}
+
+-(void)fromNoHome{
+
+    [self.btnViewSelect1 removeFromSuperview];
+    [self.treatBtn addSubview:self.btnViewSelect2];
+
+}
+
+#pragma mark - 查看日期按钮
+//日期按钮的方法
+- (IBAction)BtnDays:(UIButton *)sender
+{
+    if (sender.tag==100)
+    {
+        UIButton *button=(UIButton *)[self.view viewWithTag:100];
+        [self ChangeButtonSytle:button OpenButton:YES];
+        
+        UIButton *button1=(UIButton *)[self.view viewWithTag:110];
+        [self ChangeButtonSytle:button1 OpenButton:NO];
+        UIButton *button2=(UIButton *)[self.view viewWithTag:120];
+        [self ChangeButtonSytle:button2 OpenButton:NO];
+        UIButton *button3=(UIButton *)[self.view viewWithTag:130];
+        [self ChangeButtonSytle:button3 OpenButton:NO];
+        UIButton *button4=(UIButton *)[self.view viewWithTag:140];
+        [self ChangeButtonSytle:button4 OpenButton:NO];
+        UIButton *button5=(UIButton *)[self.view viewWithTag:150];
+        [self ChangeButtonSytle:button5 OpenButton:NO];
+        //设置当前日期
+        self.todyDate=self.dayinButton[0];
+        [self getPatienerdata:self.todyDate];
+        [self.patientCell reloadData];
+//        NSLog(@"100");
+    }
+    if (sender.tag==110)
+    {
+//        NSLog(@"110");
+        UIButton *button=(UIButton *)[self.view viewWithTag:100];
+        [self ChangeButtonSytle:button OpenButton:NO];
+        UIButton *button1=(UIButton *)[self.view viewWithTag:110];
+        [self ChangeButtonSytle:button1 OpenButton:YES];
+        UIButton *button2=(UIButton *)[self.view viewWithTag:120];
+        [self ChangeButtonSytle:button2 OpenButton:NO];
+        UIButton *button3=(UIButton *)[self.view viewWithTag:130];
+        [self ChangeButtonSytle:button3 OpenButton:NO];
+        UIButton *button4=(UIButton *)[self.view viewWithTag:140];
+        [self ChangeButtonSytle:button4 OpenButton:NO];
+        UIButton *button5=(UIButton *)[self.view viewWithTag:150];
+        [self ChangeButtonSytle:button5 OpenButton:NO];
+        //设置当前日期
+        self.todyDate=self.dayinButton[1];
+        [self getPatienerdata:self.todyDate];
+        [self.patientCell reloadData];
+    }
+    if (sender.tag==120)
+    {
+        UIButton *button=(UIButton *)[self.view viewWithTag:100];
+        [self ChangeButtonSytle:button OpenButton:NO];
+        UIButton *button1=(UIButton *)[self.view viewWithTag:110];
+        [self ChangeButtonSytle:button1 OpenButton:NO];
+        UIButton *button2=(UIButton *)[self.view viewWithTag:120];
+        [self ChangeButtonSytle:button2 OpenButton:YES];
+        UIButton *button3=(UIButton *)[self.view viewWithTag:130];
+        [self ChangeButtonSytle:button3 OpenButton:NO];
+        UIButton *button4=(UIButton *)[self.view viewWithTag:140];
+        [self ChangeButtonSytle:button4 OpenButton:NO];
+        UIButton *button5=(UIButton *)[self.view viewWithTag:150];
+        [self ChangeButtonSytle:button5 OpenButton:NO];
+        //设置当前日期
+        self.todyDate=self.dayinButton[2];
+        [self getPatienerdata:self.todyDate];
+        [self.patientCell reloadData];
+//        NSLog(@"120");
+    }
+    if (sender.tag==130)
+    {
+//        NSLog(@"130");
+        UIButton *button=(UIButton *)[self.view viewWithTag:100];
+        [self ChangeButtonSytle:button OpenButton:NO];
+        UIButton *button1=(UIButton *)[self.view viewWithTag:110];
+        [self ChangeButtonSytle:button1 OpenButton:NO];
+        UIButton *button2=(UIButton *)[self.view viewWithTag:120];
+        [self ChangeButtonSytle:button2 OpenButton:NO];
+        UIButton *button3=(UIButton *)[self.view viewWithTag:130];
+        [self ChangeButtonSytle:button3 OpenButton:YES];
+        UIButton *button4=(UIButton *)[self.view viewWithTag:140];
+        [self ChangeButtonSytle:button4 OpenButton:NO];
+        UIButton *button5=(UIButton *)[self.view viewWithTag:150];
+        [self ChangeButtonSytle:button5 OpenButton:NO];
+        
+        //设置当前日期
+        self.todyDate=self.dayinButton[3];
+        [self getPatienerdata:self.todyDate];
+        [self.patientCell reloadData];
+    }
+    if (sender.tag==140)
+    {
+//        NSLog(@"140");
+        UIButton *button=(UIButton *)[self.view viewWithTag:100];
+        [self ChangeButtonSytle:button OpenButton:NO];
+        UIButton *button1=(UIButton *)[self.view viewWithTag:110];
+        [self ChangeButtonSytle:button1 OpenButton:NO];
+        UIButton *button2=(UIButton *)[self.view viewWithTag:120];
+        [self ChangeButtonSytle:button2 OpenButton:NO];
+        UIButton *button3=(UIButton *)[self.view viewWithTag:130];
+        [self ChangeButtonSytle:button3 OpenButton:NO];
+        UIButton *button4=(UIButton *)[self.view viewWithTag:140];
+        [self ChangeButtonSytle:button4 OpenButton:YES];
+        UIButton *button5=(UIButton *)[self.view viewWithTag:150];
+        [self ChangeButtonSytle:button5 OpenButton:NO];
+        
+        //设置当前日期
+        self.todyDate=self.dayinButton[4];
+        [self getPatienerdata:self.todyDate];
+        [self.patientCell reloadData];
+    }
+    if (sender.tag==150)
+    {
+//        NSLog(@"150");
+        UIButton *button=(UIButton *)[self.view viewWithTag:100];
+        [self ChangeButtonSytle:button OpenButton:NO];
+        UIButton *button1=(UIButton *)[self.view viewWithTag:110];
+        [self ChangeButtonSytle:button1 OpenButton:NO];
+        UIButton *button2=(UIButton *)[self.view viewWithTag:120];
+        [self ChangeButtonSytle:button2 OpenButton:NO];
+        UIButton *button3=(UIButton *)[self.view viewWithTag:130];
+        [self ChangeButtonSytle:button3 OpenButton:NO];
+        UIButton *button4=(UIButton *)[self.view viewWithTag:140];
+        [self ChangeButtonSytle:button4 OpenButton:NO];
+        UIButton *button5=(UIButton *)[self.view viewWithTag:150];
+        [self ChangeButtonSytle:button5 OpenButton:YES];
+        
+        //设置当前日期
+        self.todyDate=self.dayinButton[5];
+        [self getPatienerdata:self.todyDate];
+        [self.patientCell reloadData];
+    }
+}
+
+/**
+ *  设置选中的按钮的背景色
+ *
+ *  @param button 要修改的按钮
+ *  @param open   是否打开
+ */
+-(void)ChangeButtonSytle:(UIButton *)button OpenButton:(BOOL)open
+{
+    if (open==YES)
+    {
+        button.backgroundColor=BLUECOLOR_STYLE;
+        button.layer.cornerRadius=5;
+        button.layer.masksToBounds=YES;
+    }
+    if (open==NO)
+    {
+        button.backgroundColor=[UIColor colorWithWhite:1.000 alpha:0.000];
+        button.layer.cornerRadius=0;
+        button.layer.masksToBounds=NO;
+    }
+}
+
+#pragma mark - 查看日历按钮弹出pickview
+- (IBAction)BtnSeachDays:(UIButton *)sender
+{
+    //创建遮盖试图
+    UIView *shadeView=[[UIView alloc]initWithFrame:CGRectMake(0, 0, kWith, kHeight)];
+    shadeView.backgroundColor=[UIColor colorWithWhite:0.500 alpha:0.301];
+    [self.view addSubview:shadeView];
+    
+    //创建时间滚轮
+    UIDatePicker *datePickerView=[[UIDatePicker alloc]initWithFrame:CGRectMake(0, 0, 250,120)];
+    //    datePickerView.backgroundColor=BLUECOLOR_STYLE;
+    //锁定为中文
+    NSLocale *locale=[[NSLocale alloc]initWithLocaleIdentifier:@"zh_CN"];
+    datePickerView.locale=locale;
+    //时间模式
+    datePickerView.datePickerMode=UIDatePickerModeDate;
+    //设置前面的时间和后面时间
+    NSCalendar *calendar=[[NSCalendar alloc]initWithCalendarIdentifier:NSCalendarIdentifierGregorian];
+    NSDate *currentDate=[NSDate date];
+    NSDateComponents *comps=[[NSDateComponents alloc]init];
+    //前面4天的时间
+    [comps setDay:4];
+    NSDate *maxDate=[calendar dateByAddingComponents:comps toDate:currentDate options:0];
+    [datePickerView setMaximumDate:maxDate];
+
+    //创建提示框
+    CXAlertView *cxAlertView = [[CXAlertView alloc]initWithTitle:nil contentView:datePickerView cancelButtonTitle:nil];
+    [cxAlertView addButtonWithTitle:@"确定"
+                               type:CXAlertViewButtonTypeCustom
+                            handler:^(CXAlertView *alertView, CXAlertButtonItem *button){
+                                alertView.showBlurBackground = YES;
+                                [cxAlertView dismiss];
+                                [shadeView removeFromSuperview];
+                                
+                                //截取时间
+                                NSDate *select=[datePickerView date];
+                                //输入时间,计算出前一天和后五天
+                                [self dateForButtonTitle:select];
+                                self.todyDate=[NSString stringWithFormat:@"%@",select];
+                                [self getPatienerdata:self.todyDate];
+                                [self.patientCell reloadData];
+                            }];
+    [cxAlertView addButtonWithTitle:@"取消"
+                               type:CXAlertViewButtonTypeCustom
+                            handler:^(CXAlertView *alertView, CXAlertButtonItem *button){
+                                alertView.showBlurBackground = YES;
+                                [cxAlertView dismiss];
+                                [shadeView removeFromSuperview];
+                            }];
+    cxAlertView.showBlurBackground = NO;
+    [cxAlertView show];
+}
+
+#pragma mark - 输入时间,计算出前一天和后五天
+/**
+ *  输入时间,计算出前一天和后五天
+ *
+ *  @param date 输入选中时间
+ */
+-(void)dateForButtonTitle:(NSDate *)date
+{
+    //当前时间并计算选中后面5天的时间
+    NSDateFormatter *dateFormatter=[[NSDateFormatter alloc]init];
+    [dateFormatter setDateFormat:@"yyyy-MM-dd"];
+    NSDate *yesterday=[NSDate dateWithTimeInterval:-60*60*24 sinceDate:date];
+    NSDate *tomorrow1=[NSDate dateWithTimeInterval:60*60*24 sinceDate:date];
+    NSDate *tomorrow2=[NSDate dateWithTimeInterval:60*60*24*2 sinceDate:date];
+    NSDate *tomorrow3=[NSDate dateWithTimeInterval:60*60*24*3 sinceDate:date];
+    NSDate *tomorrow4=[NSDate dateWithTimeInterval:60*60*24*4 sinceDate:date];
+    
+    
+    NSString *yeseterdayStr=[dateFormatter stringFromDate:yesterday];
+    NSString *dateStr=[dateFormatter stringFromDate:date];
+    NSString *tomorrow1Str=[dateFormatter stringFromDate:tomorrow1];
+    NSString *tomorrow2Str=[dateFormatter stringFromDate:tomorrow2];
+    NSString *tomorrow3Str=[dateFormatter stringFromDate:tomorrow3];
+    NSString *tomorrow4Str=[dateFormatter stringFromDate:tomorrow4];
+    //存入按钮上面的数据
+    self.dayinButton=[[NSMutableArray alloc]init];
+    [dateFormatter setDateFormat:@"yyyy-MM-dd"];
+    
+    [self.dayinButton addObject:yeseterdayStr];
+    [self.dayinButton addObject:dateStr];
+    [self.dayinButton addObject:tomorrow1Str];
+    [self.dayinButton addObject:tomorrow2Str];
+    [self.dayinButton addObject:tomorrow3Str];
+    [self.dayinButton addObject:tomorrow4Str];
+
+    
+    //通过获取到的日期计算周几
+    yeseterdayStr=[self getWeekWithDate:yesterday];
+    dateStr=[self getWeekWithDate:date];
+    tomorrow1Str=[self getWeekWithDate:tomorrow1];
+    tomorrow2Str=[self getWeekWithDate:tomorrow2];
+    tomorrow3Str=[self getWeekWithDate:tomorrow3];
+    tomorrow4Str=[self getWeekWithDate:tomorrow4];
+    
+    //存入星期几数组中
+    NSMutableArray *daysWeek=[[NSMutableArray alloc]init];
+    [daysWeek addObject:yeseterdayStr];
+    [daysWeek addObject:dateStr];
+    [daysWeek addObject:tomorrow1Str];
+    [daysWeek addObject:tomorrow2Str];
+    [daysWeek addObject:tomorrow3Str];
+    [daysWeek addObject:tomorrow4Str];
+    
+    //把获取到的日期存入数组
+    //重新设置格式 转为字符串
+    [dateFormatter setDateFormat:@"MM-dd"];
+    yeseterdayStr=[dateFormatter stringFromDate:yesterday];
+    dateStr=[dateFormatter stringFromDate:date];
+    tomorrow1Str=[dateFormatter stringFromDate:tomorrow1];
+    tomorrow2Str=[dateFormatter stringFromDate:tomorrow2];
+    tomorrow3Str=[dateFormatter stringFromDate:tomorrow3];
+    tomorrow4Str=[dateFormatter stringFromDate:tomorrow4];
+    
+    //存入几月几号数组中
+    NSMutableArray *daysMon=[[NSMutableArray alloc]init];
+    [daysMon addObject:yeseterdayStr];
+    [daysMon addObject:dateStr];
+    [daysMon addObject:tomorrow1Str];
+    [daysMon addObject:tomorrow2Str];
+    [daysMon addObject:tomorrow3Str];
+    [daysMon addObject:tomorrow4Str];
+    
+    //循环设置按钮的标题
+    [self changeBtnTitleForDays:daysWeek andForDayMon:daysMon];
+    
+    //设置默认选中按钮为第二个
+    UIButton *button=(UIButton *)[self.view viewWithTag:100];
+    [self ChangeButtonSytle:button OpenButton:NO];
+    UIButton *button1=(UIButton *)[self.view viewWithTag:110];
+    [self ChangeButtonSytle:button1 OpenButton:YES];
+    UIButton *button2=(UIButton *)[self.view viewWithTag:120];
+    [self ChangeButtonSytle:button2 OpenButton:NO];
+    UIButton *button3=(UIButton *)[self.view viewWithTag:130];
+    [self ChangeButtonSytle:button3 OpenButton:NO];
+    UIButton *button4=(UIButton *)[self.view viewWithTag:140];
+    [self ChangeButtonSytle:button4 OpenButton:NO];
+    UIButton *button5=(UIButton *)[self.view viewWithTag:150];
+    [self ChangeButtonSytle:button5 OpenButton:NO];
+}
+
+#pragma mark - 设置按钮上日期的方法
+/**
+ *  设置按钮上日期的方法
+ *
+ *  @param daysWeed 周几的数组
+ *  @param daysMon  几月几号的数组
+ */
+-(void)changeBtnTitleForDays:(NSMutableArray *)daysWeek andForDayMon:(NSMutableArray *)daysMon
+{
+    for (int i=0; i<6; i++)
+    {
+        UILabel *weeklabel = (UILabel *)[self.view viewWithTag:10+i];
+        UILabel *dayMon=(UILabel *)[self.view viewWithTag:20+i];
+        weeklabel.text=daysWeek[i];
+        dayMon.text=daysMon[i];
+//        NSLog(@"%@\n",daysWeek[i]);
+//        NSLog(@"%@\n",daysMon[i]);
+    }
+}
+
+#pragma mark - 获取具体时间的星期几
+-(NSString *)getWeekWithDate:(NSDate *)date
+{
+    NSCalendar *calendar=[[NSCalendar alloc]initWithCalendarIdentifier:NSCalendarIdentifierGregorian];
+    NSDateComponents *comps=[calendar components:NSCalendarUnitWeekday fromDate:date];
+//    NSLog(@"%ld",(long)[comps weekday]);
+    NSString *dateWeek;
+    //判断是周几
+    if ((long)[comps weekday]==1)
+    {
+        //日
+        dateWeek=@"日";
+        return dateWeek;
+    }
+    else if ((long)[comps weekday]==2)
+    {
+        //一
+        dateWeek=@"一";
+        return dateWeek;
+    }
+    else if ((long)[comps weekday]==3)
+    {
+        //二
+        dateWeek=@"二";
+        return dateWeek;
+    }
+    else if ((long)[comps weekday]==4)
+    {
+        //三
+        dateWeek=@"三";
+        return dateWeek;
+    }
+    else if ((long)[comps weekday]==5)
+    {
+        //四
+        dateWeek=@"四";
+        return dateWeek;
+    }
+    else if ((long)[comps weekday]==6)
+    {
+        //五
+        dateWeek=@"五";
+        return dateWeek;
+    }
+        //六
+        dateWeek=@"六";
+        return dateWeek;
+    
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

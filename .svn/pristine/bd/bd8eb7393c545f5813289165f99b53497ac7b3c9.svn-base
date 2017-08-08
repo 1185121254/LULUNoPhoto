@@ -1,0 +1,603 @@
+//
+//  ScDicsussViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/8/9.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "ScDicsussViewController.h"
+#import "ImportPatientViewController.h"
+#import "CollecDocAddViewController.h"
+#import "TZImagePickerController.h"
+#import "CaseDocListViewController.h"
+#import "ShowPicCollectionViewCell.h"
+#import "CaseCommentViewController.h"
+#import "ShowPic.h"
+
+#import "iflyMSC/IFlyMSC.h"
+#import "iflyMSC/IFlySpeechRecognizerDelegate.h"
+#import "iflyMSC/IFlySpeechRecognizer.h"
+
+@interface ScDicsussViewController ()<TZImagePickerControllerDelegate,IFlyRecognizerViewDelegate>
+{
+    BOOL _isHaveImport;
+    //图片数组
+    NSMutableArray *_arryImage;
+    NSMutableArray *_arryPhonoes;
+    NSArray *_arryImport;
+    //邀请医生的数组
+    NSMutableArray *_arryotherDoc;
+    //医生列表
+    ShowPic *_invientDocList;
+    ShowPic *_picList;
+
+    
+    IFlyRecognizerView *_iflyRecognizerView;
+    NSInteger _btnTage;
+    MBProgressHUD *_HUD;
+}
+@end
+
+@implementation ScDicsussViewController
+-(void)dealloc{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+-(void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    self.navigationController.navigationBar.hidden = NO;
+    if ([self.from isEqualToString:@"import"])
+    {
+        self.from = @"";
+        [_arryPhonoes removeAllObjects];
+        [self getData];
+    }
+}
+
+-(void)viewDidAppear:(BOOL)animated{
+    [super viewDidAppear:animated];
+    [self refreshLayout];
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.automaticallyAdjustsScrollViewInsets = NO;
+    self.title = @"新增病历讨论";
+    self.scrollViewDiscuss.backgroundColor = [UIColor colorWithRed:230/255.0 green:230/255.0 blue:230/255.0 alpha:1];
+    self.btnSummit.backgroundColor = BLUECOLOR_STYLE;
+    
+    UIBarButtonItem *rightCase = [[UIBarButtonItem alloc]initWithTitle:@"导入病历" style:UIBarButtonItemStylePlain target:self action:@selector(onRightCase)];
+    self.navigationItem.rightBarButtonItem = rightCase;
+    
+    UIButton *btnleft = [UIButton buttonWithType:UIButtonTypeCustom];
+    btnleft.frame = CGRectMake(0, 0, 13, 22);
+    [btnleft addTarget:self action:@selector(onLeftCase) forControlEvents:UIControlEventTouchUpInside];
+    [btnleft setBackgroundImage:[UIImage imageNamed:@"返回"] forState:UIControlStateNormal];
+    UIBarButtonItem *letf = [[UIBarButtonItem alloc]initWithCustomView:btnleft];
+    self.navigationItem.leftBarButtonItem = letf;
+    
+    //图片列表
+    _arryImage = [NSMutableArray array];
+    [self setImage];
+    //医生列表
+    _arryotherDoc = [NSMutableArray array];
+    [self invientDocList:self.intiveDocView];
+
+    //添加图片
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(onNotifyCAsePicAddDoc:) name:@"addPic" object:nil];
+    //删除图片
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(onDeletePic:) name:@"picDelete" object:nil];
+    //添加医生
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(onNoifyCaseAddPic:) name:@"addDoc" object:nil];
+    //返回医生数组
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(onNotifyCASEFriends:) name:@"CASEFriends" object:nil];
+}
+
+#pragma mark----------------  创建医生列表
+-(void)invientDocList:(UIView *)picSuperView{
+    
+    NSInteger count = kWith/60;
+    NSInteger reste = (NSInteger)kWith % 60;
+    float gap = reste/(count + 1);
+    if ((_arryotherDoc.count+1) % count == 0) {
+        _intiveDocHeight.constant = (60+gap)*((_arryotherDoc.count+1)/count)+4*gap;
+    }else
+    {
+        _intiveDocHeight.constant = (60+gap)*((_arryotherDoc.count+1)/count) + 60+gap*4;
+    }
+    UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc]init];
+    layout.sectionInset = UIEdgeInsetsMake(gap, gap, gap, gap);
+    layout.minimumLineSpacing = gap;
+    layout.minimumInteritemSpacing = gap;
+    layout.itemSize = CGSizeMake(60, 60);
+    
+    _invientDocList = [[ShowPic alloc]initWithFrame:CGRectMake(0, 0, _intiveDocView.frame.size.width, _intiveDocHeight.constant) collectionViewLayout:layout];
+    _invientDocList.from = @"doc";
+    _invientDocList.arryData = _arryotherDoc;
+    [picSuperView addSubview:_invientDocList];
+}
+#pragma mark----------------  更新医生列表
+-(void)updateDocList:(NSMutableArray *)arry{
+    NSInteger count = kWith/60;
+    NSInteger reste = (NSInteger)kWith % 60;
+    float gap = reste/(count + 1);
+    if ((_arryotherDoc.count+1) % count == 0) {
+        _intiveDocHeight.constant = (60+gap)*((_arryotherDoc.count+1)/count)+4*gap;
+    }else
+    {
+        _intiveDocHeight.constant = (60+gap)*((_arryotherDoc.count+1)/count) + 60+gap*4;
+    }
+    _invientDocList.frame = CGRectMake(0, 0, _intiveDocView.frame.size.width, _intiveDocHeight.constant);
+    [_invientDocList refreshCollection:_arryotherDoc];
+    [self refreshLayout];
+}
+
+#pragma mark----------------  创建图片
+-(void)setImage{
+    NSInteger count = kWith/kItemWidth;
+    NSInteger reste = (NSInteger)kWith % kItemWidth;
+    float gap = reste/(count + 1);
+    if ((_arryImage.count+1) % count == 0) {
+        _picHeight.constant = (kItemWidth+gap)*((_arryImage.count+1)/count)+4*gap;
+    }else
+    {
+        _picHeight.constant = (kItemWidth+gap)*((_arryImage.count+1)/count) + kItemWidth+gap*4;
+    }
+    UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc]init];
+    layout.sectionInset = UIEdgeInsetsMake(gap, gap, gap, gap);
+    layout.minimumLineSpacing = gap;
+    layout.minimumInteritemSpacing = gap;
+    layout.itemSize = CGSizeMake(kItemWidth, kItemWidth);
+    
+    _picList = [[ShowPic alloc]initWithFrame:CGRectMake(0, 0, _picView.frame.size.width, _picHeight.constant) collectionViewLayout:layout];
+    _picList.arryData = _arryImage;
+    _picList.from = @"pic";
+    [_picView addSubview:_picList];
+}
+#pragma mark----------------  更新图片
+-(void)updatePicList:(NSMutableArray *)arry{
+    NSInteger count = kWith/kItemWidth;
+    NSInteger reste = (NSInteger)kWith % kItemWidth;
+    float gap = reste/(count + 1);
+    if ((arry.count+1) % count == 0) {
+        _picHeight.constant = (kItemWidth+gap)*((arry.count+1)/count)+4*gap;
+    }else
+    {
+        _picHeight.constant = (kItemWidth+gap)*((arry.count+1)/count) + kItemWidth+gap*4;
+    }
+    _picList.frame = CGRectMake(0, 0, _picView.frame.size.width, _picHeight.constant);
+    [_picList refreshCollection:arry];
+    [self refreshLayout];
+}
+
+-(void)getData{
+    //姓名
+    if ([self.dicImport objectForKey:@"name"]) {
+        self.nameTextFile.text =  [self.dicImport objectForKey:@"name"];
+    }
+    //性别
+    if ([self.dicImport objectForKey:@"sex"] == nil)
+    {
+        self.btnMan.selected = YES;
+        self.btnWoman.selected = NO;
+    }else
+    {
+        if ([[self.dicImport objectForKey:@"sex"] integerValue]==1) {
+            self.btnMan.selected = YES;
+            self.btnWoman.selected = NO;
+        }else
+        {
+            self.btnMan.selected = NO;
+            self.btnWoman.selected = YES;
+        }
+    }
+    //年龄
+    if ([self.dicImport objectForKey:@"age"])
+    {
+        self.ageTextFile.text =  [NSString stringWithFormat:@"%@",[self.dicImport objectForKey:@"age"]];
+    }
+    //描述
+    if ([self.dicImport objectForKey:@"illDetail"]) {
+        self.despTextView.text = [self.dicImport objectForKey:@"illDetail"];
+        self.despHeight.constant = [self textViewheight:self.despTextView];
+    }else
+    {
+        self.despTextView.text = @"";
+    }
+    self.despPlacor.hidden = YES;
+
+    //诊断
+    if ([self.dicImport objectForKey:@"description"]) {
+        self.diagnoseTextView.text = [self.dicImport objectForKey:@"description"];
+        self.diagnoseheight.constant = [self textViewheight:self.diagnoseTextView];
+    }else
+    {
+        self.diagnoseTextView.text = @"";
+    }
+    self.diagnosePlacor.hidden = YES;
+
+    //图片
+    if ([self.dicImport objectForKey:@"picList"] != nil) {
+        _isHaveImport = YES;
+        _arryImage = [NSMutableArray arrayWithArray:[self.dicImport objectForKey:@"picList"]];
+        _arryImport = [self.dicImport objectForKey:@"picList"];
+    }else
+    {
+        _arryImport = [NSArray array];
+        _arryImage = [NSMutableArray array];
+        _isHaveImport = NO;
+    }
+    [self updatePicList:_arryImage];
+}
+
+#pragma mark --------选择图片
+-(void)onNotifyCAsePicAddDoc:(NSNotification *)notify
+{
+    if (9-_arryImage.count<=0) {
+        kAlter(@"不能超过九张图片");
+        return;
+    }
+    TZImagePickerController *imagePickerVc = [[TZImagePickerController alloc] initWithMaxImagesCount:9-_arryImport.count delegate:self];
+    imagePickerVc.allowPickingVideo = NO;
+    imagePickerVc.allowPickingOriginalPhoto = NO;
+    imagePickerVc.selectedAssets = _arryPhonoes;
+    [imagePickerVc setDidFinishPickingPhotosHandle:^(NSArray<UIImage *> *photos, NSArray *assets, BOOL isSelectOriginalPhoto)
+     {
+         _arryPhonoes = [NSMutableArray arrayWithArray:assets];
+         _arryImage = [NSMutableArray arrayWithArray:_arryImport];
+         for (UIImage *image in photos)
+         {
+             [_arryImage addObject:image];
+         };
+         [self updatePicList:_arryImage];
+     }];
+    
+    [self presentViewController:imagePickerVc animated:YES completion:nil];
+}
+
+#pragma mark--------------------删除图片
+-(void)onDeletePic:(NSNotification *)notify{
+    ShowPicCollectionViewCell *cell = notify.object;
+    NSIndexPath *index = [_picList indexPathForCell:cell];
+    if (_isHaveImport != YES) {
+        [_arryPhonoes removeObjectAtIndex:index.item];
+    }else
+    {
+        if (index.item<_arryImport.count) {
+            NSMutableArray *arryMU = [NSMutableArray arrayWithArray:_arryImport];
+            [arryMU removeObjectAtIndex:index.item];
+            _arryImport = [NSArray arrayWithArray:arryMU];
+        }else
+        {
+            [_arryPhonoes removeObjectAtIndex:index.item-_arryImport.count];
+        }
+    }
+    [_arryImage removeObjectAtIndex:index.item];
+    [self updatePicList:_arryImage];
+}
+
+
+#pragma mark--------------------邀请医生列表
+-(void)onNoifyCaseAddPic:(NSNotification *)notify{
+    
+    CaseDocListViewController *doc = [[CaseDocListViewController alloc]init];
+    doc.from = @"CaseAdd";
+    doc.arryS = _arryotherDoc;
+    [self.navigationController pushViewController:doc animated:YES];
+}
+
+-(void)onNotifyCASEFriends:(NSNotification *)notify{
+    _arryotherDoc = notify.object;
+    [self updateDocList:_arryotherDoc];
+}
+#pragma mark--------------------讯飞
+- (IBAction)btnXunFly:(UIButton *)sender {
+
+    if (_iflyRecognizerView == nil) {
+        _iflyRecognizerView = [[IFlyRecognizerView alloc] initWithCenter:self.view.center];
+    }
+    _btnTage = sender.tag;
+    _iflyRecognizerView.delegate = self;
+    [_iflyRecognizerView setParameter: @"iat" forKey: [IFlySpeechConstant IFLY_DOMAIN]];
+    [_iflyRecognizerView setParameter:nil forKey:[IFlySpeechConstant ASR_AUDIO_PATH]];
+    [_iflyRecognizerView setParameter:@"plain" forKey:[IFlySpeechConstant RESULT_TYPE]];
+    [_iflyRecognizerView start];
+
+}
+
+-(void)onResult:(NSArray *)resultArray isLast:(BOOL)isLast{
+    
+    NSString *str = [[resultArray lastObject] allKeys][0];
+    if ([str isEqualToString:@"。"]) {
+        return;
+    }
+    if (str) {
+        if (_btnTage == 610) {
+            self.diagnoseTextView.text = str;
+            self.diagnoseheight.constant = [self textViewheight:self.diagnoseTextView];
+            self.diagnosePlacor.hidden = YES;
+        }
+        else if (_btnTage == 611){
+            self.despTextView.text = str;
+            self.despHeight.constant = [self textViewheight:self.despTextView];
+            self.despPlacor.hidden = YES;
+        }
+
+        [self refreshLayout];
+    }
+    
+}
+
+- (void)onError: (IFlySpeechError *) error
+{
+    NSLog(@"==========%@  %d   %d",error.errorDesc,error.errorCode,error.errorType);
+}
+
+#pragma mark--------------------导入病历
+-(void)onRightCase{
+    ImportPatientViewController *import = [[ImportPatientViewController alloc]init];
+    import.from  = @"importPatient";
+    [self.navigationController pushViewController:import animated:YES];
+}
+
+-(void)onLeftCase{
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+#pragma mark--------------------提交
+-(BOOL)isNull{
+
+    if (self.nameTextFile.text == nil||[self.nameTextFile.text isEqualToString:@""]) {
+        kAlter(@"姓名不能为空");
+        return NO;
+    }
+    else if (self.nameTextFile.text.length > 8){
+        kAlter(@"姓名不能超过8个字符");
+        return NO;
+    }
+    
+    if (self.diagnoseTextView.text == nil||[self.diagnoseTextView.text isEqualToString:@""]) {
+        kAlter(@"疾病诊断不能为空");
+        return NO;
+    }
+    if (self.despTextView.text == nil||[self.despTextView.text isEqualToString:@""]) {
+        kAlter(@"症状描述不能为空");
+        return NO;
+    }
+    if (self.ageTextFile.text == nil||[self.ageTextFile.text isEqualToString:@""]) {
+        kAlter(@"年龄不能为空");
+        return NO;
+    }
+    NSString *regex = @"^[0-9]*$";
+    NSPredicate *pred = [NSPredicate predicateWithFormat:@"SELF MATCHES %@", regex];
+    if (![pred evaluateWithObject:_ageTextFile.text] || [_ageTextFile.text integerValue]<=0) {
+        kAlter(@"年龄只能是大于0的数字！");
+        return NO;
+    }
+    if ([_ageTextFile.text integerValue] > 150) {
+        kAlter(@"年龄最大不能超过150岁");
+        return NO;
+    }
+    if ([_nameTextFile.text length] >50) {
+        kAlter(@"名字不能超过50个字符");
+        return NO;
+    }
+    return YES;
+}
+- (IBAction)btnWoman:(id)sender {
+    self.btnMan.selected = NO;
+    self.btnWoman.selected = YES;
+}
+
+- (IBAction)btnMan:(id)sender {
+    self.btnMan.selected = YES;
+    self.btnWoman.selected = NO;
+}
+
+- (IBAction)btnSummit:(id)sender {
+    [self.view endEditing:YES];
+    [self onBtnComm];
+}
+
+-(void)onBtnComm{
+    if ([self isNull]==NO) {
+        return;
+    }
+    
+    NIMCreateTeamOption *option = [[NIMCreateTeamOption alloc] init];
+    option.name       = @"zhengchang";
+    option.type       = NIMTeamTypeNormal;
+    
+    _HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    _HUD.mode = MBProgressHUDModeIndeterminate;
+    _HUD.labelText = @"正在加载";
+    _HUD.hidden = NO;
+    NSMutableArray *members = [NSMutableArray array];
+    for (NSDictionary *dic in _arryotherDoc) {
+        NSString *DocID = [dic objectForKey:@"loginId"];
+        [members addObject:[NSString stringWithFormat:@"d%@",DocID]];
+    }
+    [[NIMSDK sharedSDK].teamManager createTeam:option users:members completion:^(NSError *error, NSString *teamId) {
+        if (!error) {
+            
+            NSMutableArray *arryIMageData = [NSMutableArray array];
+            NSMutableArray *arryImageUrl = [NSMutableArray array];
+            if (_arryImage.count != 0 && _arryImage != nil) {
+                for (id obj in _arryImage)
+                {
+                    if ([obj isKindOfClass:[UIImage class]]) {
+                        NSData *data = UIImageJPEGRepresentation(obj, 1);
+                        [arryIMageData addObject:data];
+                    }else
+                    {
+                        [arryImageUrl addObject:obj];
+                    }
+                };
+                if (arryIMageData.count>0) {
+                    NSDictionary *header = @{@"verifyCode":[kUserDefatuel objectForKey:@"verifyCode"]};
+                    //上传图片
+                    [RequestManager CasePicWithURLString:[NSString stringWithFormat:@"%@/api/Share/PictureUpload",NET_URLSTRING] heads:header Parameters:arryIMageData Complation:^(NSDictionary *dicCom) {
+                        if ([[dicCom objectForKey:@"code"] integerValue]==10000)
+                        {
+                            for (NSDictionary *dicimage in [dicCom objectForKey:@"value"]) {
+                                [arryImageUrl addObject:dicimage];
+                            }
+                            [self submitData:arryImageUrl team:teamId];
+                        }else
+                        {
+                            _HUD.hidden = YES;
+                            kAlter(@"上传图片失败");
+                        }
+                    } Fail:^(NSError *error) {
+                        _HUD.hidden = YES;
+                        kAlter(@"上传图片失败");
+                    }];
+                }else
+                {
+                    [self submitData:arryImageUrl team:teamId];
+                }
+            }else
+            {
+                [self submitData:arryImageUrl team:teamId];
+            }
+        }else{
+            _HUD.hidden = YES;
+            kAlter(@"提交失败");
+            return;
+        }
+    }];
+}
+
+-(void)submitData:(NSMutableArray *)arryImageUrl team:(NSString *)teamId{
+    
+    NSMutableArray *arryID = [NSMutableArray array];
+    for (NSDictionary *dic in _arryotherDoc) {
+        NSDictionary *dicMem = @{@"memberId":[dic objectForKey:@"friendId"]};
+        [arryID addObject:dicMem];
+    }
+    NSString *sex;
+    if (self.btnMan.selected == YES) {
+        sex = @"1";
+    }else
+    {
+         sex = @"0";
+    }
+    NSDictionary * parm=@{@"patientName":self.nameTextFile.text,
+                          @"sex":sex,
+                          @"age":self.ageTextFile.text,@"illness":self.despTextView.text,
+                          @"memberList":arryID,@"teamId":teamId,
+                          @"diagnosisResult":self.diagnoseTextView.text,
+                          @"picList":arryImageUrl,
+                          @"doctorId":[kUserDefatuel objectForKey:@"id"]};
+    [RequestManager publishAdviceURL:[NSString stringWithFormat:@"%@/api/Doctor/DiscussionAdd",NET_URLSTRING] parameters:parm Complation:^(NSDictionary *dicData) {
+        _HUD.hidden = YES;
+        if ([[dicData objectForKey:@"code"] integerValue]==10000) {
+            UIAlertController *alter = [UIAlertController alertControllerWithTitle:@"提示" message:@"发布成功" preferredStyle:UIAlertControllerStyleAlert];
+            [alter addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+                CaseCommentViewController *caseComm = [[CaseCommentViewController alloc]init];
+                caseComm.from = @"creatCasePatient";
+                caseComm.dicGroup = [dicData objectForKey:@"value"];
+                [self.navigationController pushViewController:caseComm animated:YES];
+            }]];
+            [self presentViewController:alter animated:YES completion:nil];
+        }else
+        {
+            kAlter(@"提交失败");
+        }
+        
+    } Fail:^(NSError *error) {
+        _HUD.hidden = YES;
+        kAlter(@"提交失败");
+    }];
+}
+
+
+#pragma mark--------------------TextViewDelegate
+- (void)textViewDidChange:(UITextView *)textView{
+    
+    if (textView.tag == 510) {
+        self.diagnosePlacor.hidden = [self textViewLength:textView];
+        if ([self textViewTextOutStr:textView length:50]) {
+            kAlter(@"疾病诊断不能超出50个字符");
+        }
+        self.diagnoseheight.constant = [self textViewheight:textView];
+    }
+    else if(textView.tag == 511){
+        self.despPlacor.hidden = [self textViewLength:textView];
+        if ([self textViewTextOutStr:textView length:200]) {
+            kAlter(@"症状描述不能超出200个字符");
+        }
+        self.despHeight.constant = [self textViewheight:textView];
+    }
+    [self refreshLayout];
+}
+- (void)textViewDidBeginEditing:(UITextView *)textView{
+    
+    if (textView.tag == 510) {
+        self.diagnosePlacor.hidden = YES;
+    }
+    else if (textView.tag == 511){
+        self.despPlacor.hidden = YES;
+    }
+}
+
+- (void)textViewDidEndEditing:(UITextView *)textView{
+    
+    if (textView.tag == 510) {
+        self.diagnosePlacor.hidden = [self textViewLength:textView];
+    }
+    else if (textView.tag == 511){
+        self.despPlacor.hidden = [self textViewLength:textView];
+    }
+}
+
+-(BOOL)textViewTextOutStr:(UITextView *)textView length:(NSInteger)legth{
+    
+    if (textView.text.length>legth) {
+        NSString *outLength = [textView.text substringWithRange:NSMakeRange(legth, textView.text.length-legth)];
+        textView.text =  [textView.text stringByReplacingOccurrencesOfString:outLength withString:@""];
+        return YES;
+    }
+    return NO;
+}
+
+-(BOOL)textViewLength:(UITextView *)textView{
+    if (textView.text.length==0) {
+        return NO;
+    }
+    return YES;
+}
+
+-(CGFloat)textViewheight:(UITextView *)textView{
+    CGRect rect = textView.bounds;
+    CGSize maxSize = CGSizeMake(rect.size.width, CGFLOAT_MAX);
+    CGSize newSize = [textView sizeThatFits:maxSize];
+    return newSize.height;
+}
+#pragma mark--------------------更新约束
+
+-(void)refreshLayout{
+    [self.view layoutIfNeeded];
+    
+    CGFloat height = self.nameHeight.constant+self.sexHeight.constant+self.ageHeight.constant+self.diagnoseheight.constant+self.despHeight.constant+self.picHeight.constant+self.intiveDocHeight.constant+self.btnSummitHeight.constant+60+8*5;
+    if (height<kHeight-64) {
+        height = kHeight-64+1;
+    }
+    
+    self.scrollViewDiscuss.contentSize = CGSizeMake(kWith, height);
+}
+
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

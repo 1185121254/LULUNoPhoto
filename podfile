@@ -1,0 +1,13 @@
+platform :ios, ‘8.0’
+pod 'AFNetworking'
+pod 'SDWebImage'
+pod 'IQKeyboardManager'
+pod 'CXAlertView'
+pod 'MJRefresh'
+pod 'FMDB'
+pod 'MZTimerLabel'
+pod 'NIMSDK'
+pod 'MJPhotoBrowser'
+pod 'UMengAnalytics'
+pod 'UMengSocialCOM'
+pod 'iOS-UMengMessage', '~> 1.3.0'

@@ -1,0 +1,39 @@
+//
+//  MyPatientsTableViewCell.m
+//  HuaxiaDotor
+//
+//  Created by kock on 16/3/30.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "MyPatientsTableViewCell.h"
+
+@implementation MyPatientsTableViewCell
+
+- (void)awakeFromNib
+{
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+-(void)setCellPatient:(NSDictionary *)dic andBtnHidden:(BOOL)hidden
+{
+    //名字
+    self.lblName.text=dic[@"patientName"];
+    //身份证
+    self.lblID.text=dic[@"idCard"];
+    //预约时间
+    self.lblApmDate.text=dic[@"apmDate"];
+    //已预约按钮是否显示
+    self.btnCheckout.hidden=hidden;
+    //用户信息数据的字典
+    self.userDataDic=dic;
+
+}
+
+@end

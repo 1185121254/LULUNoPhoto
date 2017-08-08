@@ -1,0 +1,363 @@
+//
+//  CaseDiscussViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/5/24.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "CaseDiscussViewController.h"
+#import "CaseDiscussTableViewCell.h"
+#import "Anasisy.h"
+#import "CaseModel.h"
+
+//#import "AddCaseViewController.h"
+#import "ScDicsussViewController.h"
+
+#import "CaseCommentViewController.h"
+#import "MJRefresh.h"
+#import "SearchCaseViewController.h"
+
+@interface CaseDiscussViewController ()<UITableViewDelegate,UITableViewDataSource,NIMConversationManagerDelegate>
+{
+    UITableView *_tableView;
+    NSMutableArray *_arrryData;
+    
+    NSDateFormatter *_dateformatte;
+    
+}
+@end
+
+@implementation CaseDiscussViewController
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    self.navigationController.navigationBar.hidden = NO;
+    self.tabBarController.tabBar.hidden = YES;
+    
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    [dic setObject:@"1" forKey:@"page"];
+    [dic setObject:@"20" forKey:@"rows"];
+    [dic setObject:[kUserDefatuel objectForKey:@"id"] forKey:@"doctorId"];
+    [dic setObject:@"" forKey:@"patientName"];
+
+    
+    [RequestManager getWithURLStringALL:[NSString stringWithFormat:@"%@/api/Doctor/DiscussionListFind",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:dic viewConroller:self success:^(id responseObject) {
+
+        NSArray *array = [self detailWithData:(NSArray *)responseObject];
+        if (array == nil || array.count == 0) {
+            self.noData.hidden = NO;
+            self.noData.frame = CGRectMake(0, (kHeight-60)/2, kWith, 60);
+        }else
+        {
+            self.noData.hidden = YES;
+            _arrryData = [self shengXuPatientConCase:array];
+            [self getUnReadMsg];
+            [_tableView reloadData];
+        }
+    } failure:^(NSError *error) {
+
+    }];
+
+}
+
+-(NSMutableArray *)detailWithData:(NSArray *)arry{
+    NSMutableArray *arryData = [NSMutableArray array];
+    
+    for (NSDictionary *dicValue in arry) {
+        CaseModel *model = [[CaseModel alloc]init];
+        for (NSString *key in [dicValue allKeys]) {
+            [model setValue:[dicValue objectForKey:key] forKey:key];
+        }
+        [arryData addObject:model];
+    }
+    return arryData;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    _arrryData = [NSMutableArray array];
+    self.title  =@"讨论中的病历";
+    self.view.backgroundColor = kBackgroundColor;
+    self.automaticallyAdjustsScrollViewInsets = NO;
+    
+    UIButton *btnSearchCon = [UIButton buttonWithType:UIButtonTypeCustom];
+    btnSearchCon.backgroundColor = [UIColor whiteColor];
+    btnSearchCon.frame = CGRectMake(20, 64+10, kWith-40, 30);
+    [btnSearchCon setTitle:@"🔍输入患者相关信息" forState:UIControlStateNormal];
+    [btnSearchCon setTitleColor:kBoradColor forState:UIControlStateNormal];
+    [btnSearchCon addTarget:self action:@selector(onSearchCAse) forControlEvents:UIControlEventTouchUpInside];
+    btnSearchCon.layer.cornerRadius = 3;
+    btnSearchCon.layer.masksToBounds = YES;
+    [self.view addSubview:btnSearchCon];
+    
+    _dateformatte = [[NSDateFormatter alloc]init];
+    [_dateformatte setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+    [[NIMSDK sharedSDK].conversationManager addDelegate:self];
+    
+    _tableView = [[UITableView alloc]initWithFrame:CGRectMake(0, 114, kWith, kHeight-114)];
+    _tableView.backgroundColor = [UIColor clearColor];
+    _tableView.separatorStyle =UITableViewCellSeparatorStyleNone;
+    _tableView.dataSource = self;
+    _tableView.delegate = self;
+    [self.view addSubview:_tableView];
+
+    UIBarButtonItem *rightCase = [[UIBarButtonItem alloc]initWithImage:[UIImage imageNamed:@"t-+"] style:UIBarButtonItemStylePlain target:self action:@selector(onRightBtnCase)];
+    self.navigationItem.rightBarButtonItem = rightCase;
+    
+    [_tableView registerClass:[CaseDiscussTableViewCell class] forCellReuseIdentifier:@"case"];
+    
+    __weak CaseDiscussViewController *weakSelf = self;
+    _tableView.mj_header = [MJRefreshNormalHeader headerWithRefreshingBlock:^{
+        [weakSelf refreshData:YES];
+    }];
+    
+    _tableView.mj_footer = [MJRefreshBackNormalFooter footerWithRefreshingBlock:^{
+        [weakSelf refreshData:NO];
+    }];
+}
+
+-(void)refreshData:(BOOL)isDown{
+    static NSInteger page = 1;
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    [dic setObject:@"10" forKey:@"rows"];
+    [dic setObject:[kUserDefatuel objectForKey:@"id"] forKey:@"doctorId"];
+    [dic setObject:@"" forKey:@"patientName"];
+    
+    if (isDown == YES) {
+        page = 1;
+        [_tableView.mj_footer resetNoMoreData];
+        [dic setObject:@(page) forKey:@"page"];
+    }else
+    {
+        page++;
+        [dic setObject:@(page) forKey:@"page"];
+    }
+    [RequestManager getWithURLStringALL:[NSString stringWithFormat:@"%@/api/Doctor/DiscussionListFind",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:dic viewConroller:self success:^(id responseObject) {
+        NSArray *array = [self detailWithData:(NSArray *)responseObject];
+        if (array == nil || array.count == 0) {
+            if (isDown==NO) {
+                [_tableView.mj_footer endRefreshingWithNoMoreData];
+                return ;
+            }else
+            {
+                [_tableView.mj_header endRefreshing];
+                self.noData.frame = CGRectMake(0, (kHeight-60)/2, kWith, 60);
+                self.noData.hidden = NO;
+            }
+        }else
+        {
+            self.noData.hidden = YES;
+            if (isDown==YES)
+            {
+                _arrryData = [self shengXuPatientConCase:array];
+            }
+            else
+            {
+                NSMutableArray *add = [NSMutableArray arrayWithArray:_arrryData];
+                for (CaseModel *model in array)
+                {
+                    [add addObject:model];
+                }
+                _arrryData = [self shengXuPatientConCase:add];
+            }
+        }
+        if (isDown==YES)
+        {
+            [_tableView.mj_header endRefreshing];
+        }
+        else
+        {
+            [_tableView.mj_footer endRefreshing];
+        }
+        [self getUnReadMsg];
+        [_tableView reloadData];
+    } failure:^(NSError *error) {
+        
+    }];
+
+    [_tableView.mj_header endRefreshing];
+}
+
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return _arrryData.count;
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return 71;
+}
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+
+    CaseDiscussTableViewCell *cell  = [tableView dequeueReusableCellWithIdentifier:@"case" forIndexPath:indexPath];
+
+    CaseModel *model = _arrryData[indexPath.row];
+    NSString *Sex;
+    if ([model.sex isEqualToString:@"1"]) {
+        Sex = @"男";
+    }else{
+        Sex = @"女";
+    }
+    cell.lblName.attributedText = [self setText:[NSString stringWithFormat:@"%@    %@  %@岁",model.patientName,Sex,model.age]];
+
+    if (model.latestDate) {
+        cell.lblTime.text =  model.latestDate;
+    }else
+    {
+        cell.lblTime.text = model.createDate;
+    }
+    if (model.illness == nil) {
+        cell.lblDesp.text = @"症状描述:未填写";
+    }else
+    {
+        cell.lblDesp.text = [NSString stringWithFormat:@"症状描述:%@",model.illness];
+    }
+    if ([model.NewMessage integerValue] == 0) {
+        cell.lblNewMeg.hidden = YES;
+    }else
+    {
+        cell.lblNewMeg.hidden = NO;
+        cell.lblNewMeg.text = model.NewMessage;
+    }
+    return cell;
+}
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    [_tableView deselectRowAtIndexPath:indexPath animated:YES];
+    
+    CaseModel *model = _arrryData[indexPath.row];
+    CaseCommentViewController *casep = [[CaseCommentViewController alloc]init];
+    casep.model = model;
+    [self.navigationController pushViewController:casep animated:YES];
+}
+
+-(BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath{
+    return YES;
+}
+
+-(NSString *)tableView:(UITableView *)tableView titleForDeleteConfirmationButtonForRowAtIndexPath:(NSIndexPath *)indexPath{
+     return @"退出讨论组";
+}
+
+-(void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath{
+
+    CaseModel *model = _arrryData[indexPath.row];
+    UIAlertController *alter = [UIAlertController alertControllerWithTitle:@"提示" message:@"确定要退出讨论组吗?" preferredStyle:UIAlertControllerStyleAlert];
+    [alter addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+    [alter addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+       
+
+        [[NIMSDK sharedSDK].teamManager quitTeam:model.teamId completion:^(NSError *error) {
+            NSMutableDictionary *dicPara = [NSMutableDictionary dictionary];
+            [dicPara setObject:model.disId forKey:@"disId"];
+            [dicPara setObject:[kUserDefatuel objectForKey:@"id"] forKey:@"memberId"];
+            [RequestManager getWithURLStringALL:[NSString stringWithFormat:@"%@/api/Doctor/DiscussionMemberDelete",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:dicPara viewConroller:self success:^(id responseObject) {
+
+                [_arrryData removeObjectAtIndex:indexPath.row];
+                if (_arrryData.count == 0) {
+                    self.noData.frame = CGRectMake(0, (kHeight-60)/2, kWith, 60);
+                    self.noData.hidden = NO;
+                }
+                [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
+            } failure:^(NSError *error) {
+
+            }];
+        }];
+    }]];
+    
+    [self presentViewController:alter animated:YES completion:nil];
+    
+    
+}
+
+-(void)onRightBtnCase{
+    ScDicsussViewController *addCase = [[ScDicsussViewController alloc]init];
+    [self.navigationController pushViewController:addCase animated:YES];
+}
+
+//富文本
+-(NSMutableAttributedString *)setText:(NSString *)text{
+    
+    NSArray *arry = [text componentsSeparatedByString:@"    "];
+    NSString *strUnit = arry[1];
+    
+    NSMutableAttributedString *medStr = [[NSMutableAttributedString alloc]initWithString:text];
+    [medStr addAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:13]} range:[text rangeOfString:strUnit]];
+    return medStr;
+}
+
+#pragma mark--------搜索
+-(void)onSearchCAse{
+
+    SearchCaseViewController *search = [[SearchCaseViewController alloc]init];
+    [self.navigationController pushViewController:search animated:YES];
+}
+
+#pragma mark--------升序
+-(NSMutableArray *)shengXuPatientConCase:(NSArray *)arry{
+    NSDateFormatter *dateFormatter = [NSDateFormatter new];
+    dateFormatter.dateFormat = @"yyyy/MM/dd HH:mm:ss";
+    
+    NSMutableArray * array = [NSMutableArray arrayWithArray:[arry sortedArrayUsingComparator:^NSComparisonResult(CaseModel *modelM1, CaseModel *modelM2) {
+        NSDate *date1 = [dateFormatter dateFromString:modelM1.latestDate];
+        NSDate *date2 = [dateFormatter dateFromString:modelM2.latestDate];
+        NSComparisonResult result = [date2 compare:date1];
+        return result == NSOrderedDescending;
+    }]];
+    return array;
+}
+
+#pragma mark-------未读消息变已读
+
+-(void)getUnReadMsg{
+
+    _recentSessions = [[NIMSDK sharedSDK].conversationManager.allRecentSessions mutableCopy];
+    
+    for (CaseModel *model in _arrryData) {
+        
+        for (NIMRecentSession *recentSession in _recentSessions) {
+            
+            if ([recentSession.session.sessionId isEqualToString:model.teamId]) {
+                
+                model.NewMessage = [NSString stringWithFormat:@"%ld",(long)recentSession.unreadCount];
+//                NSDate *date = [NSDate dateWithTimeIntervalSince1970:recentSession.lastMessage.timestamp];
+//                model.latestDate = [_dateformatte stringFromDate:date];
+            }
+        }
+
+    }
+}
+
+//修改最近会话的回调
+- (void)didUpdateRecentSession:(NIMRecentSession *)recentSession
+              totalUnreadCount:(NSInteger)totalUnreadCount{
+
+}
+
+//删除最近会话的回调
+- (void)didRemoveRecentSession:(NIMRecentSession *)recentSession
+              totalUnreadCount:(NSInteger)totalUnreadCount{
+    
+}
+
+//单个会话里所有消息被删除的回调
+- (void)messagesDeletedInSession:(NIMSession *)session{
+    
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

@@ -1,0 +1,666 @@
+//
+//  CalculateViewController.m
+//  HuaxiaDotor
+//
+//  Created by kock on 16/4/11.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "CalculateViewController.h"
+
+@interface CalculateViewController ()<UITableViewDataSource,UITableViewDelegate,UIPickerViewDataSource,UIPickerViewDelegate>
+@property (strong, nonatomic) UITableView *tableview;
+@property (strong, nonatomic) UIView *tableHeaderView;
+@property (assign, nonatomic) BOOL select1;
+@property (assign, nonatomic) BOOL select2;
+@property (assign, nonatomic) BOOL select3;
+@property (assign, nonatomic) BOOL select4;
+@property (assign, nonatomic) BOOL select5;
+//老视度数
+@property (strong, nonatomic) UIPickerView *pickView;
+//年龄和调节幅度
+@property (strong, nonatomic) UIPickerView *pickView1;
+//角膜厚度
+@property (strong, nonatomic) UIPickerView *pickview2;
+//视力换算
+@property (strong, nonatomic) UIPickerView *pickview3;
+//年龄与调节幅度
+@property (strong, nonatomic) UIPickerView *pickview4;
+//-----------------
+//老视度数估算数组
+@property (strong, nonatomic) NSArray *ageAndChange;
+//年龄和调节幅度数组
+@property (strong, nonatomic) NSArray *ageSetting;
+//角膜厚度数组
+@property (strong, nonatomic) NSArray *thick;
+//视力换算数组
+@property (strong, nonatomic) NSArray *conversion;
+//年龄与调节幅度数组
+@property (strong, nonatomic) NSArray *regulate;
+//-----------------
+@property (strong, nonatomic) UILabel *label;
+//选中的变量
+@property (assign, nonatomic) int a,b;
+
+//pickView的tag值
+@property (assign, nonatomic) int tagForPickview;
+
+@end
+
+@implementation CalculateViewController
+#pragma mark - 获取年龄与调节幅度数组
+-(NSArray*)regulate
+{
+    if (_regulate==nil)
+    {
+        //加载plist文件
+        NSString *filePath=[[NSBundle mainBundle]pathForResource:@"regulate.plist" ofType:nil];
+        //获取数组 pickview多少列
+        _regulate =[NSArray arrayWithContentsOfFile:filePath];
+    }
+    return _regulate;
+}
+#pragma mark - 获取视力换算数组
+-(NSArray*)conversion
+{
+    if (_conversion==nil)
+    {
+        //加载plist文件
+        NSString *filePath=[[NSBundle mainBundle]pathForResource:@"conversion.plist" ofType:nil];
+        //获取数组 pickview多少列
+        _conversion =[NSArray arrayWithContentsOfFile:filePath];
+    }
+    
+    return _conversion;
+}
+#pragma mark - 获取角膜厚度数组
+-(NSArray*)thick
+{
+    if (_thick==nil)
+    {
+        //加载plist文件
+        NSString *filePath=[[NSBundle mainBundle]pathForResource:@"thick.plist" ofType:nil];
+        //获取数组 pickview多少列
+        _thick =[NSArray arrayWithContentsOfFile:filePath];
+    }
+    return _thick;
+}
+
+#pragma mark - 获取老视度数的数组
+-(NSArray*)ageAndChange
+{
+    if (_ageAndChange==nil)
+    {
+        //加载plist文件
+        NSString *filePath=[[NSBundle mainBundle]pathForResource:@"oldAgeEye.plist" ofType:nil];
+        //获取数组 pickview多少列
+        _ageAndChange =[NSArray arrayWithContentsOfFile:filePath];
+    }
+    return _ageAndChange;
+}
+#pragma mark - 获取年龄与调节幅度
+-(NSArray*)ageSetting
+{
+    if (_ageSetting==nil)
+    {
+        //加载plist文件
+        NSString *filePath=[[NSBundle mainBundle]pathForResource:@"ageSetting.plist" ofType:nil];
+        //获取数组 pickview多少列
+        _ageSetting =[NSArray arrayWithContentsOfFile:filePath];
+    }
+    return _ageSetting;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    
+    self.select1=NO;
+    self.select2=NO;
+    self.select3=NO;
+    self.select4=NO;
+    self.select5=NO;
+    
+    //创建tableView
+    [self createTableView];
+}
+
+#pragma mark - 创建tableview
+-(void)createTableView
+{
+    self.tableview=[[UITableView alloc]initWithFrame:CGRectMake(0, 0, SCREEN_W, SCREEN_H) style:UITableViewStyleGrouped];
+    self.tableview.dataSource=self;
+    self.tableview.delegate=self;
+    //创建tableview
+    [self.view addSubview:self.tableview];
+    
+    self.a=1;
+    self.b=445;
+}
+
+#pragma mark - 创建tableview
+-(UIView*)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section
+{
+    self.tableHeaderView=[[UIView alloc]initWithFrame:CGRectMake(0, 0, SCREEN_W, 50)];
+    if (section==0)
+    {
+        [self createheaderView:@"老视度数估算" andImageDown:self.select1 andButtonTag:10001];
+    }
+    if (section==1)
+    {
+        [self createheaderView:@"年龄与调节幅度" andImageDown:self.select2 andButtonTag:10002];
+    }
+    if (section==2)
+    {
+        [self createheaderView:@"角膜厚度-眼压矫正" andImageDown:self.select3 andButtonTag:10003];
+    }
+    if (section==3)
+    {
+        [self createheaderView:@"视力换算" andImageDown:self.select4 andButtonTag:10004];
+    }
+    if (section==4)
+    {
+        [self createheaderView:@"年龄与调节幅度" andImageDown:self.select5 andButtonTag:10005];
+    }
+    return self.tableHeaderView;
+}
+
+#pragma mark - 设置tableview上的按钮
+-(void)settingCellHiddent:(UIButton *)sender
+{
+    if (sender.tag==10001)
+    {
+        self.select1=!self.select1;
+        [self createheaderView:nil andImageDown:self.select1 andButtonTag:10001];
+        [self.tableview reloadData];
+    }
+    if (sender.tag==10002)
+    {
+        self.select2=!self.select2;
+        [self createheaderView:nil andImageDown:self.select2 andButtonTag:10002];
+        [self.tableview reloadData];
+    }
+    if (sender.tag==10003)
+    {
+        self.select3=!self.select3;
+        [self createheaderView:nil andImageDown:self.select3 andButtonTag:10003];
+        [self.tableview reloadData];
+    }
+    if (sender.tag==10004)
+    {
+        self.select4=!self.select4;
+        [self createheaderView:nil andImageDown:self.select4 andButtonTag:10004];
+        [self.tableview reloadData];
+    }
+    if (sender.tag==10005)
+    {
+        self.select5=!self.select5;
+        [self createheaderView:nil andImageDown:self.select5 andButtonTag:10005];
+        [self.tableview reloadData];
+    }
+}
+
+/**
+ *  创建标题cell的标题
+ *
+ *  @param title 标题文字
+ *  @param down  标题的箭头.YES向下,NO向上
+ *  @param tag   按钮的tag值
+ */
+-(void)createheaderView:(NSString *)title andImageDown:(BOOL)down andButtonTag:(int)tag
+{
+    if (down==YES)
+    {
+        UIButton *button=[[UIButton alloc]initWithFrame:CGRectMake(0, 0, SCREEN_W, 50)];
+        button.tag=tag;
+        [button addTarget:self action:@selector(settingCellHiddent:) forControlEvents:UIControlEventTouchUpInside];
+        UILabel *lblTitle=[[UILabel alloc]initWithFrame:CGRectMake(10, 15, SCREEN_W-50, 20)];
+        lblTitle.text=title;
+        lblTitle.textColor=[UIColor colorWithWhite:0.000 alpha:0.689];
+        lblTitle.font =[UIFont systemFontOfSize:14];
+        UIImageView *headerView=[[UIImageView alloc]initWithFrame:CGRectMake(lblTitle.frame.size.width+20, 20, 15, 10)];
+        headerView.image=[UIImage imageNamed:@"arrow_down_gray"];
+        
+        [button addSubview:headerView];
+        [button addSubview:lblTitle];
+        [self.tableHeaderView addSubview:button];
+    }
+    if (down==NO)
+    {
+        UIButton *button=[[UIButton alloc]initWithFrame:CGRectMake(0, 0, SCREEN_W, 50)];
+        button.tag=tag;
+        [button addTarget:self action:@selector(settingCellHiddent:) forControlEvents:UIControlEventTouchUpInside];
+        UILabel *lblTitle=[[UILabel alloc]initWithFrame:CGRectMake(10, 15, SCREEN_W-50, 20)];
+        lblTitle.text=title;
+        lblTitle.textColor=[UIColor colorWithWhite:0.000 alpha:0.689];
+        lblTitle.font =[UIFont systemFontOfSize:14];
+        UIImageView *headerView=[[UIImageView alloc]initWithFrame:CGRectMake(lblTitle.frame.size.width+20, 20, 15, 10)];
+        headerView.image=[UIImage imageNamed:@"arrow_up_gray"];
+        
+        [button addSubview:headerView];
+        [button addSubview:lblTitle];
+        [self.tableHeaderView addSubview:button];
+    }
+}
+
+#pragma mark - tableview代理
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    //如果有选择的话,显示cell,不然不显示
+    if (section==0)
+    {
+        if (self.select1==YES)
+        {
+            return 1;
+        }
+    }
+    if (section==1)
+    {
+        if (self.select2==YES)
+        {
+            return 1;
+        }
+    }
+    if (section==2)
+    {
+        if (self.select3==YES)
+        {
+            return 1;
+        }
+    }
+    if (section==3)
+    {
+        if (self.select4==YES)
+        {
+            return 1;
+        }
+    }
+    if (section==4)
+    {
+        if (self.select5==YES)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+-(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return 5;
+}
+
+-(CGFloat)tableView:(UITableView *)tableView estimatedHeightForHeaderInSection:(NSInteger)section
+{
+    return 50;
+}
+-(CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section
+{
+    return 0.1;
+}
+
+
+-(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    if (indexPath.section==2)
+    {
+        return 250;
+    }
+    return 150;
+}
+
+#pragma mark - tableview data
+-(UITableViewCell*)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *identifier=@"cell";
+    UITableViewCell *cell=[[UITableViewCell alloc]initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:identifier];
+    cell.selectionStyle=NO;
+    cell.contentView.backgroundColor=[UIColor whiteColor];
+    
+    if (indexPath.section==0)
+    {
+        [cell addSubview:[self createPickViewTwoHeaderTitle:@"年龄" andTitle:@"老视度数"]];
+        self.pickView=[[UIPickerView alloc]initWithFrame:CGRectMake(0, 40, SCREEN_W, 110)];
+        self.pickView.backgroundColor=[UIColor colorWithRed:0.627 green:0.835 blue:0.408 alpha:1.000];
+        self.pickView.dataSource=self;
+        self.pickView.delegate=self;
+        [cell addSubview:self.pickView];
+    }
+    else if (indexPath.section==1)
+    {
+        [cell addSubview:[self createPickViewTwoHeaderTitle:@"年龄" andTitle:@"调节幅度"]];
+        self.pickView1=[[UIPickerView alloc]initWithFrame:CGRectMake(0, 40, SCREEN_W, 110)];
+        self.pickView1.backgroundColor=[UIColor colorWithRed:0.627 green:0.835 blue:0.408 alpha:1.000];
+        self.pickView1.dataSource=self;
+        self.pickView1.delegate=self;
+        [cell addSubview:self.pickView1];
+    }
+    else if (indexPath.section==2)
+    {
+        [cell addSubview:[self createPickViewTwoHeaderTitle:@"压平眼压" andTitle:@"中央角膜厚度"]];
+        self.pickview2=[[UIPickerView alloc]initWithFrame:CGRectMake(0, 40, SCREEN_W, 110)];
+        self.pickview2.backgroundColor=[UIColor colorWithRed:0.627 green:0.835 blue:0.408 alpha:1.000];
+        self.pickview2.dataSource=self;
+        self.pickview2.delegate=self;
+        //计算按钮
+        UIButton *button=[[UIButton alloc]initWithFrame:CGRectMake(SCREEN_W/12, 160, SCREEN_W/12*10, 35)];
+        button.layer.cornerRadius=5;
+        button.layer.masksToBounds=YES;
+        button.backgroundColor=BLUECOLOR_STYLE;
+        [button setTintColor:[UIColor whiteColor]];
+        [button addTarget:self action:@selector(calculateEye:) forControlEvents:UIControlEventTouchUpInside];
+        [button setTitle:@"计算" forState:UIControlStateNormal];
+        //计算文本框
+        self.label=[[UILabel alloc]initWithFrame:CGRectMake(SCREEN_W/12, 160+35+10, SCREEN_W/12*10, 35)];
+        self.label.layer.cornerRadius=5;
+        self.label.layer.masksToBounds=YES;
+        [self.label.layer setBorderWidth:0.5];
+        [self.label.layer setBorderColor:[UIColor blackColor].CGColor];
+        [cell addSubview:self.label];
+        [cell addSubview:button];
+        [cell addSubview:self.pickview2];
+    }
+    else if (indexPath.section==3)
+    {
+        [cell addSubview:[self createForePickViewHeaderTitle:@"年龄" andTitle:@"老视度数" andTitle:@"老视度数" andTitle:@"老视度数"]];
+        self.pickview3=[[UIPickerView alloc]initWithFrame:CGRectMake(0, 40, SCREEN_W, 110)];
+        self.pickview3.backgroundColor=[UIColor colorWithRed:0.627 green:0.835 blue:0.408 alpha:1.000];
+        self.pickview3.dataSource=self;
+        self.pickview3.delegate=self;
+        [cell addSubview:self.pickview3];
+    }
+    else if (indexPath.section==4)
+    {
+        [cell addSubview:[self createForePickViewHeaderTitle:@"刻度" andTitle:@"标尺" andTitle:@"mmHg" andTitle:@"Kpa"]];
+        self.pickview4=[[UIPickerView alloc]initWithFrame:CGRectMake(0, 40, SCREEN_W, 110)];
+        self.pickview4.backgroundColor=[UIColor colorWithRed:0.627 green:0.835 blue:0.408 alpha:1.000];
+        self.pickview4.dataSource=self;
+        self.pickview4.delegate=self;
+        [cell addSubview:self.pickview4];
+    }
+    return cell;
+}
+
+
+- (void)selectRow:(NSInteger)row inComponent:(NSInteger)component animated:(BOOL)animated
+{
+    if (_tagForPickview==10000)//老视度数
+    {
+//        NSLog(@"行%ld==列%ld",(long)row,(long)component);
+        if (component==0)
+        {
+            [_pickView selectRow:row inComponent:1 animated:YES];
+        }
+        else
+        {
+            [_pickView selectRow:row inComponent:0 animated:YES];
+        }
+    }
+    else if (_tagForPickview==10001)//年龄和调节幅度
+    {
+        if (component==0)
+        {
+            [_pickView1 selectRow:row inComponent:1 animated:YES];
+        }
+        else
+        {
+            [_pickView1 selectRow:row inComponent:0 animated:YES];
+        }
+//        NSLog(@"%ld==%ld",(long)row,(long)component);
+    }
+//    else if (_tagForPickview==10002)//角膜厚度
+//    {
+//    }
+    else if (_tagForPickview==10003)//视力换算
+    {
+        if (component==0)
+        {
+            [_pickview3 selectRow:row inComponent:1 animated:YES];
+            [_pickview3 selectRow:row inComponent:2 animated:YES];
+            [_pickview3 selectRow:row inComponent:3 animated:YES];
+        }
+        else if (component==1)
+        {
+            [_pickview3 selectRow:row inComponent:0 animated:YES];
+            [_pickview3 selectRow:row inComponent:2 animated:YES];
+            [_pickview3 selectRow:row inComponent:3 animated:YES];
+        }
+        else if (component==2)
+        {
+            [_pickview3 selectRow:row inComponent:1 animated:YES];
+            [_pickview3 selectRow:row inComponent:2 animated:YES];
+            [_pickview3 selectRow:row inComponent:3 animated:YES];
+        }
+        else if (component==3)
+        {
+            [_pickview3 selectRow:row inComponent:1 animated:YES];
+            [_pickview3 selectRow:row inComponent:2 animated:YES];
+            [_pickview3 selectRow:row inComponent:0 animated:YES];
+        }
+//        NSLog(@"%ld==%ld",(long)row,(long)component);
+    }
+    else if (_tagForPickview==10004)//年龄与调节幅度
+    {
+        if (component==0)
+        {
+            [_pickview4 selectRow:row inComponent:1 animated:YES];
+            [_pickview4 selectRow:row inComponent:2 animated:YES];
+            [_pickview4 selectRow:row inComponent:3 animated:YES];
+        }
+        else if (component==1)
+        {
+            [_pickview4 selectRow:row inComponent:0 animated:YES];
+            [_pickview4 selectRow:row inComponent:2 animated:YES];
+            [_pickview4 selectRow:row inComponent:3 animated:YES];
+        }
+        else if (component==2)
+        {
+            [_pickview4 selectRow:row inComponent:1 animated:YES];
+            [_pickview4 selectRow:row inComponent:2 animated:YES];
+            [_pickview4 selectRow:row inComponent:3 animated:YES];
+        }
+        else if (component==3)
+        {
+            [_pickview4 selectRow:row inComponent:1 animated:YES];
+            [_pickview4 selectRow:row inComponent:2 animated:YES];
+            [_pickview4 selectRow:row inComponent:0 animated:YES];
+        }
+//        NSLog(@"%ld==%ld",(long)row,(long)component);
+    }
+    
+}
+
+#pragma mark - pickview选中方法 Componen行第row列
+-(void)pickerView:(UIPickerView *)pickerView didSelectRow:(NSInteger)row inComponent:(NSInteger)component
+{
+    if(pickerView==self.pickView)//老视度数
+    {
+        [self selectRow:row inComponent:component animated:YES];
+        _tagForPickview = 10000;
+    }
+    else if (pickerView==self.pickView1)//年龄和调节幅度
+    {
+        [self selectRow:row inComponent:component animated:YES];
+       _tagForPickview = 10001;
+    }
+    else if (pickerView==self.pickview2)//角膜厚度
+    {
+        switch (component)
+        {
+            case 0:
+                self.a=[[NSString stringWithFormat:@"%@",self.thick[component][row]] intValue];
+                break;
+            case 1:
+                self.b=[[NSString stringWithFormat:@"%@",self.thick[component][row]] intValue];
+                break;
+            default:
+                break;
+        }
+        _tagForPickview = 10002;
+    }
+    else if (pickerView==self.pickview3)//视力换算
+    {
+        [self selectRow:row inComponent:component animated:YES];
+        _tagForPickview = 10003;
+    }
+    else if (pickerView==self.pickview4)//年龄与调节幅度
+    {
+        [self selectRow:row inComponent:component animated:YES];
+        _tagForPickview = 10004;
+    }
+
+}
+
+#pragma mark - 眼压计算按钮
+-(void)calculateEye:(UIButton *)sender
+{
+//    NSLog(@"计算");
+    self.label.text=[NSString stringWithFormat:@"%.2f",(self.b-545)*(-0.05)+self.a];
+}
+
+#pragma mark - pickview上的两个标题的试图
+-(UIView *)createPickViewTwoHeaderTitle:(NSString*)title1 andTitle:(NSString*)title2
+{
+    UIView *view=[[UIView alloc]initWithFrame:CGRectMake(0, 0, SCREEN_W, 40)];
+    view.backgroundColor=[UIColor colorWithRed:0.549 green:0.761 blue:0.314 alpha:1.000];
+    UILabel * label1=[[UILabel alloc]initWithFrame:CGRectMake(0, 5, SCREEN_W/2, 30)];
+    label1.text = title1;
+    label1.textAlignment = 1;
+    label1.textColor =[UIColor whiteColor];
+    UILabel * label2=[[UILabel alloc]initWithFrame:CGRectMake(SCREEN_W/2, 5, SCREEN_W/2, 30)];
+    label2.textColor=[UIColor whiteColor];
+    label2.textAlignment=1;
+    label2.text=title2;
+    [view addSubview:label1];
+    [view addSubview:label2];
+    return view;
+}
+
+#pragma mark - pickview上的四个标题的试图
+-(UIView *)createForePickViewHeaderTitle:(NSString*)title1 andTitle:(NSString*)title2 andTitle:(NSString *)title3 andTitle:(NSString*)title4
+{
+    UIView *view=[[UIView alloc]initWithFrame:CGRectMake(0, 0, SCREEN_W, 40)];
+    view.backgroundColor=[UIColor colorWithRed:0.549 green:0.761 blue:0.314 alpha:1.000];
+    
+    UILabel * label1=[[UILabel alloc]initWithFrame:CGRectMake(0, 5, SCREEN_W/4, 30)];
+    label1.text=title1;
+    label1.textAlignment=UITextAlignmentCenter;
+    label1.textColor =[UIColor whiteColor];
+    
+    UILabel * label2=[[UILabel alloc]initWithFrame:CGRectMake(SCREEN_W/4, 5, SCREEN_W/4, 30)];
+    label2.textColor=[UIColor whiteColor];
+    label2.textAlignment=UITextAlignmentCenter;
+    label2.text=title2;
+    
+    UILabel * label3=[[UILabel alloc]initWithFrame:CGRectMake(SCREEN_W/4*2, 5, SCREEN_W/4, 30)];
+    label3.textColor=[UIColor whiteColor];
+    label3.textAlignment=UITextAlignmentCenter;
+    label3.text=title3;
+    
+    UILabel * label4=[[UILabel alloc]initWithFrame:CGRectMake(SCREEN_W/4*3, 5, SCREEN_W/4, 30)];
+    label4.textColor=[UIColor whiteColor];
+    label4.textAlignment=UITextAlignmentCenter;
+    label4.text=title4;
+    
+    [view addSubview:label1];
+    [view addSubview:label2];
+    [view addSubview:label3];
+    [view addSubview:label4];
+    return view;
+}
+
+#pragma mark - pickview datasource
+//多少列
+-(NSInteger)numberOfComponentsInPickerView:(UIPickerView *)pickerView
+{
+    if (pickerView==self.pickView)
+    {
+        return self.ageAndChange.count;
+    }
+    else if (pickerView==self.pickView1)
+    {
+        return self.ageSetting.count;
+    }
+    else if (pickerView==self.pickview2)
+    {
+        return self.thick.count;
+    }
+    else if (pickerView==self.pickview3)
+    {
+        return  self.conversion.count;
+    }
+    return self.regulate.count;
+}
+
+#pragma mark - pickview delegate
+//返回Component列多少行
+-(NSInteger)pickerView:(UIPickerView *)pickerView numberOfRowsInComponent:(NSInteger)component
+{
+    if (pickerView==self.pickView)
+    {
+        return [self.ageAndChange[component]count];
+    }
+    else if (pickerView==self.pickView1)
+    {
+        return [self.ageSetting[component]count];
+    }
+    else if (pickerView==self.pickview2)
+    {
+        return [self.thick[component]count];
+    }
+    else if (pickerView==self.pickview3)
+    {
+        return [self.conversion[component]count];
+    }
+     return [self.regulate[component]count];
+}
+
+//返回第component的第row行
+-(NSString *)pickerView:(UIPickerView *)pickerView titleForRow:(NSInteger)row forComponent:(NSInteger)component
+{
+    if (pickerView==self.pickView)
+    {
+        return self.ageAndChange[component][row];
+    }
+    else if (pickerView==self.pickView1)
+    {
+        return self.ageSetting[component][row];
+    }
+    else if (pickerView==self.pickview2)
+    {
+        return self.thick[component][row];
+    }
+    else if (pickerView==self.pickview3)
+    {
+        return self.conversion[component][row];
+    }
+    return self.regulate[component][row];
+}
+
+#pragma mark - pickview上字体颜色和样式
+-(UIView*)pickerView:(UIPickerView *)pickerView viewForRow:(NSInteger)row forComponent:(NSInteger)component reusingView:(UIView *)view
+{
+    UILabel* pickerLabel = (UILabel*)view;
+    if (!pickerLabel)
+    {
+        pickerLabel = [[UILabel alloc] init];
+        pickerLabel.adjustsFontSizeToFitWidth = YES;
+        [pickerLabel setTextAlignment:NSTextAlignmentCenter];
+        pickerLabel.textColor=[UIColor whiteColor];
+    }
+    pickerLabel.text=[self pickerView:pickerView titleForRow:row forComponent:component];
+    return pickerLabel;
+}
+
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

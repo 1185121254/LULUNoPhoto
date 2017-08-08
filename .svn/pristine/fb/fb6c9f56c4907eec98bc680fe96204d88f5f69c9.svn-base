@@ -1,0 +1,135 @@
+//
+//  HomeViewController.m
+//  dawnEye
+//
+//  Created by KockPeter on 16/3/8.
+//  Copyright © 2016年 kockPeter. All rights reserved.
+//
+
+#import "HomeViewController.h"
+#import "UMMobClick/MobClick.h"
+
+
+@implementation HomeViewController
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    self.navigationController.navigationBar.hidden = YES;
+    self.tabBarController.tabBar.hidden = NO;
+    [self.view endEditing:YES];
+    
+    if ([kUserDefatuel objectForKey:@"id"]==nil) {
+        [self goToLogin];
+    }
+}
+
+-(void)viewWillDisappear:(BOOL)animated{
+    [super viewWillDisappear:animated];
+//    self.navigationController.navigationBar.hidden = NO;
+}
+
+-(void)viewDidLoad{
+    [super viewDidLoad];
+
+    [self.navigationController.navigationBar setTitleTextAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:19],NSForegroundColorAttributeName:[UIColor whiteColor]}];
+    self.navigationController.navigationBar.tintColor = [UIColor whiteColor];
+
+    NSString *loginID = [[kUserDefatuel objectForKey:@"DoctorDataDic"] objectForKey:@"loginid"];
+//    NSString *passWord = [[kUserDefatuel objectForKey:@"DoctorDataDic"] objectForKey:@"password"];
+    
+    if (loginID!= nil) {
+        //NIM自动登录
+        [[[NIMSDK sharedSDK] loginManager] addDelegate:self];
+        [[[NIMSDK sharedSDK] loginManager] autoLogin:[NSString stringWithFormat:@"d%@",loginID] token:@"123456"];
+        //服务器登录
+//        [self auLoginLoginName:loginID Password:passWord];
+        
+    }
+}
+
+- (void)onLogin:(NIMLoginStep)step{
+    NSLog(@"%ld",step);
+}
+- (void)onAutoLoginFailed:(NSError *)error{
+
+}
+-(void)onKick:(NIMKickReason)code clientType:(NIMLoginClientType)clientType
+{
+    switch (code) {
+        case NIMKickReasonByClient:
+        case NIMKickReasonByClientManually:{
+            [self goLogin:@"你的帐号被踢下线，请注意帐号信息安全"];
+            break;
+        }
+        case NIMKickReasonByServer:{
+            [self goLogin:@"你被服务器踢下线"];
+        }
+            break;
+        default:
+            break;
+    }
+}
+
+-(void)goLogin:(NSString *)str{
+    UIAlertController *alter = [UIAlertController alertControllerWithTitle:@"下线通知" message:str preferredStyle:UIAlertControllerStyleAlert];
+    [alter addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        UIStoryboard *log=[UIStoryboard storyboardWithName:@" LoginView" bundle:[NSBundle mainBundle]];
+        LoginViewController *login=[log instantiateViewControllerWithIdentifier:@"LoginView"];
+        login.from = @"exit";
+        [self.navigationController pushViewController:login animated:YES];
+    }]];
+    [self presentViewController:alter animated:YES completion:nil];
+}
+
+-(void)auLoginLoginName:(NSString *)longinName Password:(NSString *)loginPassage{
+    
+    NSDictionary *paramerter = @{RESPONSE_KEY_LOGIN_ID:longinName,RESPONSE_KEY_LOGIN_PASSWORD:loginPassage};
+
+    [RequestManager postWithURLString:LOGIN_URLSTRING parameters:paramerter success:^(id responseObject){
+        NSDictionary *dic = (NSDictionary *)responseObject;
+        NSString *code = [dic objectForKey:RESPONSE_KEY_CODE];
+        //判断是否成功
+        if ([code integerValue]==RESPONSE_CODE_SUCCESS)
+        {
+            dic = [dic objectForKey:RESPONSE_KEY_VALUE];
+            //创建个人信息
+            //用户verifyCode
+            NSString *verifyCode=[dic objectForKey:RESPONSE_KEY_VERIFYCODE];
+            //用户ID
+            NSString *ID=[dic objectForKey:@"id"];
+            NSArray *arryV = [dic objectForKey:@"VasSet"];
+            [kUserDefatuel setObject:arryV[0] forKey:@"VasSet0"];
+            [kUserDefatuel setObject:arryV[1] forKey:@"VasSet1"];
+            [kUserDefatuel setObject:arryV[2] forKey:@"VasSet2"];
+            [kUserDefatuel setObject:arryV[3] forKey:@"VasSet3"];
+            
+            //用userdefault存入verifyCode和ID
+            NSUserDefaults *userDeaults = [NSUserDefaults standardUserDefaults];
+            //验证码
+            [userDeaults setObject:verifyCode forKey:@"verifyCode"];
+            //医生ID
+            [userDeaults setObject:ID forKey:@"id"];
+            //登录成功后获取到的字典信息
+            [userDeaults setObject:dic forKey:@"DoctorDataDic"];
+            [[NSUserDefaults standardUserDefaults]synchronize];
+            //友盟
+            [MobClick profileSignInWithPUID:[dic objectForKey:@"loginid"]];
+        }
+        else
+        {
+            kLoginTimeOut;
+        }
+    } failure:^(NSError *error)
+     {
+         kLoginTimeOut;
+     }];
+}
+
+-(void)goToLogin{
+    UIStoryboard *log=[UIStoryboard storyboardWithName:@" LoginView" bundle:[NSBundle mainBundle]];
+    LoginViewController *login=[log instantiateViewControllerWithIdentifier:@"LoginView"];
+    login.from = @"exit";
+    [self.navigationController pushViewController:login animated:NO];
+}
+
+@end

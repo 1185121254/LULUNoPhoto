@@ -1,0 +1,27 @@
+//
+//  PhotoPreviewTableViewCell.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 17/3/13.
+//  Copyright © 2017年 kock. All rights reserved.
+//
+
+#import "PhotoPreviewTableViewCell.h"
+
+@implementation PhotoPreviewTableViewCell
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    self.photoPreviewImage.contentMode = UIViewContentModeScaleAspectFill;
+    self.photoPreviewImage.clipsToBounds = YES;
+
+}
+
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+@end

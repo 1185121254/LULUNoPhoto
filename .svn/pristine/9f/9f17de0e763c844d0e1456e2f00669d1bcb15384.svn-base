@@ -1,0 +1,1437 @@
+//
+//  RequestManager.m
+//  HuaxiaDotor
+//
+//  Created by kock on 16/3/21.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "RequestManager.h"
+#import "PatientModel.h"
+#import "PatientDetailModel.h"
+#import "AddMocel.h"
+#import "HillFreeModel.h"
+#import "WebClinicModel.h"
+#import "CaseModel.h"
+#import "OnLineViedo.h"
+#import "DoctorAdviceModel.h"
+#import "DocAdviceDetailModel.h"
+#import "GroupModel.h"
+#import "GroupDetailModel.h"
+#import "Anasisy.h"
+@implementation RequestManager
+
+/**
+ *  POST 请求
+ *
+ *  @param url        请求地址
+ *  @param parameters 参数
+ *  @param success    请求成功回调
+ *  @param failure    请求失败回调
+ */
++(void)postWithURLString:(NSString *)url
+              parameters:(id)parameters
+                 success:(void (^)(id))success
+                 failure:(void (^)(NSError *))failure
+{
+    AFHTTPSessionManager *manage = [AFHTTPSessionManager manager];
+    [manage POST:url parameters:parameters progress:^(NSProgress * _Nonnull uploadProgress) {
+        
+    } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        if (success)
+        {
+            success(responseObject);
+        }
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        if (failure)
+        {
+            failure(error);
+        }
+    }];
+}
+
+/**
+ *  POST 请求 (包括HEAD)
+ *
+ *  @param url        请求网址
+ *  @param heads      头文件
+ *  @param parameters 参数
+ *  @param shhuccess  请求成功回调
+ *  @param failure    请求失败回调
+ */
++(void)postWithURLString:(NSString *)url
+                   heads:(NSDictionary *)heads
+              parameters:(id)parameters
+                 success:(void(^)(id responseObject))success
+                 failure:(void(^)(NSError *error))failure
+{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.securityPolicy = [AFSecurityPolicy policyWithPinningMode:AFSSLPinningModeNone];
+    manager.requestSerializer = [AFJSONRequestSerializer serializer];
+    manager.responseSerializer = [AFJSONResponseSerializer serializer];
+    [manager.requestSerializer setValue:@"application/json" forHTTPHeaderField:@"Accept"];
+    [manager.requestSerializer setValue:@"application/json; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
+    
+    NSArray *headsKey = [heads allKeys];
+    for(NSInteger i=0;i<headsKey.count;i++)
+    {
+        NSString *headKeyString = [headsKey objectAtIndex:i];
+        [manager.requestSerializer setValue:[[heads objectForKey:headKeyString] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding] forHTTPHeaderField:headKeyString];
+    }
+    [manager POST:url parameters:parameters progress:^(NSProgress * _Nonnull uploadProgress) {
+        
+    } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic=(NSDictionary *)responseObject;
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        NSNumber *code=[dic objectForKey:RESPONSE_KEY_CODE];
+        if ([code integerValue]==RESPONSE_CODE_SUCCESS)
+        {
+            if(success)
+            {
+                success([dic objectForKey:RESPONSE_KEY_VALUE]);
+            }
+        }
+        else if ([code integerValue]==RESPONSE_CODE_FAILURE)
+        {
+            [showAlertView showAlertViewWithMessage:[dic objectForKey:RESPONSE_KEY_MESSAGE]];
+        }
+        else if ([code integerValue]==RESPONSE_CODE_TIMEOUT)
+            if([dic objectForKey:RESPONSE_KEY_MESSAGE])
+            {
+                [showAlertView showAlertViewWithMessage:[dic objectForKey:RESPONSE_KEY_MESSAGE]];
+                //如果超时变退出登录
+                [PublicTools moveTologinPage];
+            }
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        if (failure)
+        {
+            failure(error);
+        }
+    }];
+}
+
++(void)getWithURLString:(NSString *)url
+                  heads:(NSDictionary *)heads
+             parameters:(id)parameters
+                success:(void(^)(id responseObject))success
+                failure:(void(^)(NSError *error))failure
+{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    
+    manager.securityPolicy = [AFSecurityPolicy policyWithPinningMode:AFSSLPinningModeNone];
+    manager.requestSerializer = [AFJSONRequestSerializer serializer];
+    manager.responseSerializer = [AFJSONResponseSerializer serializer];
+    [manager.requestSerializer setValue:@"application/json" forHTTPHeaderField:@"Accept"];
+    [manager.requestSerializer setValue:@"application/json; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
+    
+    NSArray *headsKey = [heads allKeys];
+    for(NSInteger i=0;i<headsKey.count;i++)
+    {
+        NSString *headKeyString = [headsKey objectAtIndex:i];
+        [manager.requestSerializer setValue:[heads objectForKey:headKeyString] forHTTPHeaderField:headKeyString];
+    }
+    
+    [manager GET:url parameters:parameters progress:^(NSProgress * _Nonnull downloadProgress) {
+        
+    } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        if (![responseObject isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+
+        NSInteger code = [[responseObject objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+        success(responseObject);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        failure(error);
+    }];
+}
+
+#pragma mark ------ 医生获得患者列表
++(void)getTextOrderListURL:(NSString *)url heads:(NSDictionary *)heads parameters:(id)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail{
+    
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    
+    manager.securityPolicy = [AFSecurityPolicy policyWithPinningMode:AFSSLPinningModeNone];
+    manager.requestSerializer = [AFJSONRequestSerializer serializer];
+    manager.responseSerializer = [AFJSONResponseSerializer serializer];
+    [manager.requestSerializer setValue:@"application/json" forHTTPHeaderField:@"Accept"];
+    [manager.requestSerializer setValue:@"application/json; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
+    
+    NSArray *headsKey = [heads allKeys];
+    for(NSInteger i=0;i<headsKey.count;i++)
+    {
+        NSString *headKeyString = [headsKey objectAtIndex:i];
+        [manager.requestSerializer setValue:[heads objectForKey:headKeyString] forHTTPHeaderField:headKeyString];
+    }
+    
+    [manager GET:url parameters:parameters progress:^(NSProgress * _Nonnull downloadProgress) {
+        
+    } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        
+        if (![responseObject isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        
+        NSMutableArray *arryData = [[NSMutableArray alloc]init];
+        NSInteger code = [[responseObject objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        NSArray *arry= [responseObject objectForKey:@"value"];
+        for (NSDictionary *dicValue in arry) {
+            PatientModel *patient = [[PatientModel alloc]init];
+            NSArray*arryKey = [dicValue allKeys];
+            for (NSString *key in arryKey) {
+                [patient setValue:[dicValue objectForKey:key] forKey:key];
+            }
+            [arryData addObject:patient];
+        }
+        complation(arryData);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+
+#pragma mark ------ 修改支付状态
++(void)modificationOrderState:(NSString *)url parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *code))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic = [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        complation(@(code));
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------ 建议检查项目
++(void)checkProgram:(NSString *)url parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail;{
+ 
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    
+    [manager POST:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dicCheck = [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+
+        if (![dicCheck isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dicCheck objectForKey:@"value"] isKindOfClass:[NSDictionary class]]){
+            return;
+        }
+        else if (![[[dicCheck objectForKey:@"value"] objectForKey:@"rows"] isKindOfClass:[NSArray class]]){
+            return;
+        }
+        
+        NSInteger code = [[dicCheck objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+        
+        NSDictionary *dicValue = [dicCheck objectForKey:@"value"];
+        NSArray *arry = [dicValue objectForKey:@"rows"];
+        NSMutableArray *arryData =[[NSMutableArray alloc]init];
+        for (NSDictionary *dicRows in arry) {
+            CheckModel *model = [[CheckModel alloc]init];
+            NSArray *arrykey = [dicRows allKeys];
+            for (NSString *key in arrykey) {
+                [model setValue:[dicRows objectForKey:key] forKeyPath:key];
+            }
+            [arryData addObject:model];
+        }
+        complation(arryData);
+        
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------ 建议用药
++(void)useMedic:(NSString *)url parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    
+    [manager POST:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        
+        NSDictionary *dicCheck = [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        if (![dicCheck isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dicCheck objectForKey:@"value"] isKindOfClass:[NSDictionary class]]){
+            return;
+        }
+        else if (![[[dicCheck objectForKey:@"value"] objectForKey:@"rows"] isKindOfClass:[NSArray class]]){
+            return;
+        }
+        
+        NSInteger code = [[dicCheck objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        NSDictionary *dicValue = [dicCheck objectForKey:@"value"];
+        NSArray *arry = [dicValue objectForKey:@"rows"];
+        NSMutableArray *arryData =[[NSMutableArray alloc]init];
+        for (NSDictionary *dicRows in arry) {
+            MedicModel *model = [[MedicModel alloc]init];
+            NSArray *arrykey = [dicRows allKeys];
+            for (NSString *key in arrykey) {
+                [model setValue:[dicRows objectForKey:key] forKeyPath:key];
+            }
+            [arryData addObject:model];
+        }
+        complation(arryData);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------ 获得患者详情
++(void)getPatientDetail:(NSString *)url parameters:(NSDictionary *)parameters Complation:(void(^)(PatientDetailModel *patient))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        
+        NSDictionary *dic = [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dic objectForKey:@"value"] isKindOfClass:[NSDictionary class]]){
+            return;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        NSDictionary *dicvalue = [dic objectForKey:@"value"];
+        PatientDetailModel *model = [[PatientDetailModel alloc]init];
+        NSArray *arry = [dicvalue allKeys];
+        for (NSString *key in arry) {
+            [model setValue:[dicvalue objectForKey:key] forKey:key];
+        }
+        complation(model);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+
+#pragma mark ------ 获得诊断建议
++(void)getDoctorAdviceURL:(NSString *)url parameters:(id)parameters Complation:(void(^)(AdviewDetail *adview))complation Fail:(void(^)(NSError *error))fail{
+    
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    [manager GET:url parameters:parameters progress:^(NSProgress * _Nonnull downloadProgress) {
+    } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        
+        NSDictionary *dic = [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dic objectForKey:@"value"] isKindOfClass:[NSDictionary class]]){
+            return ;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+        NSDictionary *dicValue = [dic objectForKey:@"value"];
+        NSArray *arry = [dicValue allKeys];
+        AdviewDetail *adviece = [[AdviewDetail alloc]init];
+        for (NSString *key in arry) {
+            [adviece setValue:[dicValue objectForKey:key] forKey:key];
+        }
+        
+        complation(adviece);
+        
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------ 发表诊断建议
++(void)publishAdviceURL:(NSString *)url parameters:(NSDictionary *)parameters Complation:(void(^)(NSDictionary *dicData))complation Fail:(void(^)(NSError *error))fail{
+
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.securityPolicy = [AFSecurityPolicy policyWithPinningMode:AFSSLPinningModeNone];
+    manager.requestSerializer = [AFJSONRequestSerializer serializer];
+    manager.responseSerializer = [AFJSONResponseSerializer serializer];
+    [manager.requestSerializer setValue:@"application/json" forHTTPHeaderField:@"Accept"];
+    [manager.requestSerializer setValue:@"application/json; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+
+    [manager POST:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        
+        if (![responseObject isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        
+        NSInteger code = [[responseObject objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+            return ;
+        }
+
+        complation(responseObject);
+        
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        
+        fail(error);
+        
+    }];
+}
+
+#pragma mark ------ 获取排班表
++(void)getRoster:(NSString *)url parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail{
+
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        
+        NSDictionary *dic = [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dic objectForKey:@"value"] isKindOfClass:[NSArray class]]) {
+            return;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        NSMutableArray *arry = [dic objectForKey:@"value"];
+  
+        complation(arry);
+        
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+
+    }];
+
+}
+
+
+#pragma mark ------ 设置排班表
++(void)setRoster:(NSString *)url parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *mess))complation Fail:(void(^)(NSError *error))fail{
+    
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.securityPolicy = [AFSecurityPolicy policyWithPinningMode:AFSSLPinningModeNone];
+    manager.requestSerializer = [AFJSONRequestSerializer serializer];
+    manager.responseSerializer = [AFJSONResponseSerializer serializer];
+    [manager.requestSerializer setValue:@"application/json" forHTTPHeaderField:@"Accept"];
+    [manager.requestSerializer setValue:@"application/json; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    [manager POST:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+    
+        if (![responseObject isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        
+        NSInteger code = [[responseObject objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+ 
+        complation(@(code));
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+
+    }];
+}
+
+#pragma mark ------ 电话咨询列表
++(void)getPatientPhoneList:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail{
+
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dic objectForKey:@"value"] isKindOfClass:[NSArray class]]){
+            return;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        NSMutableArray *arryData = [[NSMutableArray alloc]init];
+        NSArray *arry= [dic objectForKey:@"value"];
+        for (NSDictionary *dicValue in arry) {
+            PatientModel *patient = [[PatientModel alloc]init];
+            NSArray*arryKey = [dicValue allKeys];
+            for (NSString *key in arryKey) {
+                
+                [patient setValue:[dicValue objectForKey:key] forKey:key];
+                
+            }
+            [arryData addObject:patient];
+        }
+        complation(arryData);
+        
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------ 拨打患者电话
++(void)callPatient:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *code))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    
+     [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+         
+         NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+         
+         if ([dic isKindOfClass:[NSDictionary class]]) {
+             return ;
+         }
+         
+         NSInteger code = [[dic objectForKey:@"code"] integerValue];
+         if (code == -10004) {
+             kLoginTimeOut;
+         }
+   
+         complation(@(code));
+     } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+         fail(error);
+     }];
+}
+
+#pragma mark ------ 判断是否开启视频问诊
++(void)startViedoChat:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSString *xtrId,NSNumber *serviceAmount,NSNumber *isFree,NSNumber *code))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        if ([[dic objectForKey:@"value"] isKindOfClass:[NSDictionary class]]) {
+            
+            NSDictionary *dicvalue = [dic objectForKey:@"value"];
+            NSString *str = [dicvalue objectForKey:@"xtrId"];
+            NSInteger count = [[dicvalue objectForKey:@"serviceAmount"] integerValue];
+            NSInteger isFree = [[dicvalue objectForKey:@"isFree"] integerValue];
+            complation(str,@(count),@(isFree),nil);
+            
+        }else
+        {
+            NSInteger code = [[dic objectForKey:@"value"] integerValue];
+            complation(nil,nil,nil,@(code));
+        }
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+    
+}
+
+#pragma mark ------ 开启视频问诊
++(void)settingPublick:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *code,NSString *xtstr))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    [manager POST:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if(![[dic objectForKey:@"value"] isKindOfClass:[NSString class]]){
+            return;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+ 
+        NSString *str = [dic objectForKey:@"value"];
+        complation(@(code),str);
+        
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------ 加号
++(void)addViedo:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if(![[dic objectForKey:@"value"] isKindOfClass:[NSArray class]]){
+            return;
+        }
+        
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+        NSArray *arry = [dic objectForKey:@"value"];
+        NSMutableArray *arryData =[NSMutableArray array];
+        for (NSDictionary *dicValue in arry) {
+            AddMocel *add = [[AddMocel alloc]init];
+            NSArray *keyarry = [dicValue allKeys];
+            for (NSString *key in keyarry) {
+                [add setValue:[dicValue objectForKey:key] forKey:key];
+            }
+            [arryData addObject:add];
+        }
+        complation(arryData);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+
+#pragma mark ------ 加号同意/拒绝
++(void)agreeOrRefuse:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *code))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        complation(@(code));
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------ 关诊
++(void)closeDino:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *code))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        complation(@(code));
+        
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+    
+}
+
+#pragma mark ------ 开通在线服务
++(void)DregerOnLine:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *code))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    
+    [manager POST:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        complation(@(code));
+        
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+
+
+#pragma mark ------ 义诊发布
++(void)publishFreeDiagnose:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *array))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if(![[dic objectForKey:@"value"] isKindOfClass:[NSArray class]]){
+            return;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        NSMutableArray *arryData = [NSMutableArray array];
+        NSArray *arryValue = [dic objectForKey:@"value"];
+        for (NSDictionary *dicValue in arryValue) {
+            HillFreeModel *model = [[HillFreeModel alloc]init];
+            for (NSString *key in [dicValue allKeys]) {
+                [model setValue:[dicValue objectForKey:key] forKey:key];
+            }
+            [arryData addObject:model];
+        }
+        
+        complation(arryData);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+ 
+}
+
+//#pragma mark ------ 获取互联网会诊列表
+//+(void)getListWebClinic:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *array))complation{
+//
+//    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+//    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+//    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+//    
+//    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+//        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+//        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+//        if (code == -10004) {
+//            kLoginTimeOut;
+//        }
+//        NSMutableArray *arryData = [NSMutableArray array];
+//        NSArray *arryValue = [dic objectForKey:@"value"];
+//        for (NSDictionary *dicValue in arryValue) {
+//            WebClinicModel *model = [[WebClinicModel alloc]init];
+//            for (NSString *key in [dicValue allKeys]) {
+//                [model setValue:[dicValue objectForKey:key] forKey:key];
+//            }
+//            [arryData addObject:model];
+//        }
+//        complation(arryData);
+//        
+//    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+//        NSLog(@"失败");
+//    }];
+//}
+
+
+#pragma mark ------ 病例讨论列表
++(void)CaseList:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *array))complation Fail:(void(^)(NSError *error))fail{
+    
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if(![[dic objectForKey:@"value"] isKindOfClass:[NSArray class]]){
+            return;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        NSArray *arryValue = [dic objectForKey:@"value"];
+        NSMutableArray *arryData = [NSMutableArray array];
+
+        for (NSDictionary *dicValue in arryValue) {
+            CaseModel *model = [[CaseModel alloc]init];
+            for (NSString *key in [dicValue allKeys]) {
+                [model setValue:[dicValue objectForKey:key] forKey:key];
+            }
+            [arryData addObject:model];
+        }
+        complation(arryData);
+        
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+
+#pragma mark ------查看病例详情
++(void)findCaseDetail:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSDictionary *dicCom))complation Fail:(void(^)(NSError *error))fail{
+
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+    
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if(![[dic objectForKey:@"value"] isKindOfClass:[NSDictionary class]]){
+            return;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+        NSDictionary *dicValue = [dic objectForKey:@"value"];
+        complation(dicValue);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------发布病例
++(void)postCaseWithURLString:(NSString *)url
+             parameters:(id)parameters
+                success:(void(^)(NSDictionary *DicPostCase))success
+                failure:(void(^)(NSError *error))failure
+{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    
+    [manager POST:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+        success(dic);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        failure(error);
+    }];
+}
+
+#pragma mark ------发布病例有图
++(void)CasePicWithURLString:(NSString *)url heads:(NSDictionary *)heads Parameters:(NSArray *)parameters Complation:(void(^)(NSDictionary *dicCom))complation Fail:(void(^)(NSError *error))fail{
+    
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    
+    NSArray *headsKey = [heads allKeys];
+    for(NSInteger i=0;i<headsKey.count;i++)
+    {
+        NSString *headKeyString = [headsKey objectAtIndex:i];
+        [manager.requestSerializer setValue:[heads objectForKey:headKeyString] forHTTPHeaderField:headKeyString];
+    }
+    
+    [manager POST:url parameters:nil constructingBodyWithBlock:^(id<AFMultipartFormData>  _Nonnull formData) {
+        
+        for (NSInteger i = 0; i<parameters.count ; i++ ) {
+            NSData *data = parameters[i];
+            [formData appendPartWithFileData:data name:@"file" fileName:[NSString stringWithFormat:@"%ld.png",i] mimeType:@"image/jpeg"];
+        }
+        
+    } progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+        complation(dic);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------退出群组/邀请新人
++(void)intiveNewPerson:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *code))complation Fail:(void(^)(NSError *error))fail;{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    
+    [manager POST:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+        complation(@(code));
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------ 医生获取发布公告
++(void)getDoctorViedoList:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail{
+
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dic objectForKey:@"value"] isKindOfClass:[NSArray class]]){
+            return;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        NSArray *arryValue = [dic objectForKey:@"value"];
+        NSMutableArray *arryData =[ NSMutableArray array];
+        for (NSDictionary *dicValue in arryValue) {
+            OnLineViedo *onLine = [[OnLineViedo alloc]init];
+            for (NSString *key in [dicValue allKeys]) {
+                [onLine setValue:[dicValue objectForKey:key] forKey:key];
+            }
+            [arryData addObject:onLine];
+        }
+        complation(arryData);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+    
+}
+
+#pragma mark ------ 医生获取住院病人列吧
++(void)doctorPostPatientList:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry,NSNumber *total))complation Fail:(void(^)(NSError *error))fail{
+
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    
+    [manager POST:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dic objectForKey:@"value"] isKindOfClass:[NSDictionary class]]){
+            return;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        NSDictionary *dicValue = [dic objectForKey:@"value"];
+        NSNumber *number = [dicValue objectForKey:@"total"];
+        NSArray *arryRows = [dicValue objectForKey:@"rows"];
+        NSMutableArray *arryDoc = [NSMutableArray array];
+        for (NSDictionary *dciRows in arryRows) {
+            DoctorAdviceModel *doctor = [[DoctorAdviceModel alloc]init];
+            for (NSString *key in [dciRows allKeys]) {
+                [doctor setValue:[dciRows objectForKey:key] forKey:key];
+            }
+            [arryDoc addObject:doctor];
+        }
+        complation(arryDoc,number);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------ 医生获取医嘱列表
++(void)doctorPostDocAdvice:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry,NSNumber *total))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    
+    [manager POST:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dic objectForKey:@"value"] isKindOfClass:[NSDictionary class]]){
+            return;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        NSDictionary *dicValue = [dic objectForKey:@"value"];
+        NSNumber *number = [dicValue objectForKey:@"total"];
+        NSArray *arryRows = [dicValue objectForKey:@"rows"];
+        NSMutableArray *ArryDoc = [NSMutableArray array];
+        for (NSDictionary *dciRows in arryRows) {
+            DocAdviceDetailModel *doctor = [[DocAdviceDetailModel alloc]init];
+            for (NSString *key in [dciRows allKeys]) {
+                [doctor setValue:[dciRows objectForKey:key] forKey:key];
+            }
+            [ArryDoc addObject:doctor];
+        }
+        complation(ArryDoc,number);
+    
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------ 医生获取药品列表
++(void)doctorGetDrugList:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry,NSNumber *total))complation Fail:(void(^)(NSError *error))fail;{
+
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    
+    [manager POST:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dic objectForKey:@"value"] isKindOfClass:[NSDictionary class]]){
+            return;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        NSDictionary *dicValue = [dic objectForKey:@"value"];
+        NSNumber *number = [dicValue objectForKey:@"total"];
+        NSArray *arryRows = [dicValue objectForKey:@"rows"];
+        NSMutableArray *ArryDoc = [NSMutableArray array];
+        for (NSDictionary *dciRows in arryRows) {
+            NSMutableDictionary *doctor = [[NSMutableDictionary alloc]init];
+            for (NSString *key in [dciRows allKeys]) {
+                [doctor setObject:[dciRows objectForKey:key] forKey:key];
+            }
+            [ArryDoc addObject:doctor];
+        }
+        complation(ArryDoc,number);
+    
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+    
+}
+#pragma mark ------获取医生加的病例详情
++(void)getClipPersonDetail:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSArray *arry1,NSArray *arry2,NSArray *arry3))complation Fail:(void(^)(NSError *error))fail;{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dic objectForKey:@"value"] isKindOfClass:[NSDictionary class]]){
+            return;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        NSDictionary *dicValue = [dic objectForKey:@"value"];
+        NSArray *arry1 = [dicValue objectForKey:@"pharmacyList"];
+        NSArray *arry2 = [dicValue objectForKey:@"drugstoreList"];
+        NSArray *arry3 = [dicValue objectForKey:@"diagnosisList"];
+        complation(arry3,arry2,arry1);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+    
+}
+
+
+#pragma mark ------ 公用GET
++(void)CloseOnLine:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *code))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+ 
+        complation(@(code));
+        
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------ 公用POST
++(void)publishFreeHill:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *code))complation Fail:(void(^)(NSError *error))fail{
+    
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    
+    [manager POST:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+    
+        complation(@(code));
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------ 获取病历夹分组
++(void)getGroupListClip:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    [manager POST:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dic objectForKey:@"value"] isKindOfClass:[NSArray class]]){
+            return;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+ 
+        NSArray *arry = [dic objectForKey:@"value"];
+        NSMutableArray *arryData = [NSMutableArray array];
+        for (NSDictionary *dicValue in arry) {
+            GroupModel *group = [[GroupModel alloc]init];
+            for (NSString *key in [dicValue allKeys]) {
+                [group setValue:[dicValue objectForKey:key] forKey:key];
+            }
+            [arryData addObject:group];
+        }
+        complation(arryData);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------ 获取病历夹分组具体数据
++(void)getGroupDetailListClip:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dic objectForKey:@"value"] isKindOfClass:[NSArray class]]){
+            return;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+ 
+        NSArray *arry = [dic objectForKey:@"value"];
+        NSMutableArray *arryData = [NSMutableArray array];
+        for (NSDictionary *dicValue in arry) {
+            GroupDetailModel *groupD = [[GroupDetailModel alloc]init];
+            for (NSString *key in [dicValue allKeys]) {
+                [groupD setValue:[dicValue objectForKey:key] forKey:key];
+            }
+            [arryData addObject:groupD];
+        }
+        complation(arryData);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------ 获取医院科室详细
++(void)getGroupAddressListClip:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail;{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    [manager POST:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dic objectForKey:@"value"] isKindOfClass:[NSArray class]]){
+            return;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        NSArray *arry = [dic objectForKey:@"value"];
+        NSMutableArray *arryData = [NSMutableArray array];
+        for (NSDictionary *dicValue in arry) {
+            GroupDetailModel *groupD = [[GroupDetailModel alloc]init];
+            for (NSString *key in [dicValue allKeys]) {
+                [groupD setValue:[dicValue objectForKey:key] forKey:key];
+            }
+            [arryData addObject:groupD];
+        }
+        complation(arryData);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------ 钱包
++(void)moneyTotal:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSDictionary *dic))complation Fail:(void(^)(NSError *error))fail{
+
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dic objectForKey:@"value"] isKindOfClass:[NSDictionary class]]){
+            return;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        NSDictionary *dicValue = [dic objectForKey:@"value"];
+        complation(dicValue);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------钱包列表
++(void)moneyTotalList:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dic objectForKey:@"value"] isKindOfClass:[NSArray class]]){
+            return;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        if (code == -10004) {
+            kLoginTimeOut;
+        }
+
+        NSArray *arry = [dic objectForKey:@"value"];
+        complation([Anasisy setDateMonth:arry]);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------钱包类型列表
++(void)moneyTotalListType:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dic objectForKey:@"value"] isKindOfClass:[NSArray class]]){
+            return;
+        }
+        
+        NSInteger code = [[dic objectForKey:@"code"] integerValue];
+        NSArray *arry = [dic objectForKey:@"value"];
+        NSMutableArray *arrryData = [NSMutableArray arrayWithArray:arry];
+        if (code == -10004) {
+            kLoginTimeOut;
+            return;
+        }
+        complation(arrryData);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------轮播图片
++(void)lunBo:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSArray *arry))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    
+    [manager POST:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dicV= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dicV isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dicV objectForKey:@"value"] isKindOfClass:[NSArray class]]){
+            return;
+        }
+        
+        NSInteger code = [[dicV objectForKey:@"code"] integerValue];
+        if ([kUserDefatuel objectForKey:@"verifyCode"]!=nil) {
+            if (code == -10004) {
+                kLoginTimeOut;
+                return;
+            }
+        }
+        complation([dicV objectForKey:@"value"]);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+
+#pragma mark ------未读消息数
++(void)getUnReadMsg:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSDictionary *dicData))complation Fail:(void(^)(NSError *error))fail{
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.responseSerializer =[AFHTTPResponseSerializer serializer];
+    [manager.requestSerializer setValue:[kUserDefatuel objectForKey:@"verifyCode"] forHTTPHeaderField:@"verifyCode"];
+    [manager GET:url parameters:parameters progress:nil success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic= [NSJSONSerialization JSONObjectWithData:responseObject options:NSJSONReadingAllowFragments error:nil];
+        
+        //判断类型
+        if (![dic isKindOfClass:[NSDictionary class]]) {
+            return ;
+        }
+        else if (![[dic objectForKey:@"value"] isKindOfClass:[NSArray class]]){
+            return;
+        }
+        
+
+        complation(dic);
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        fail(error);
+    }];
+}
+@end

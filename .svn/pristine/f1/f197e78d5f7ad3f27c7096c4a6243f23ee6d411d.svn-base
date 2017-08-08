@@ -1,0 +1,138 @@
+//
+//  HomeView.m
+//  dawnEye
+//
+//  Created by KockPeter on 16/3/8.
+//  Copyright © 2016年 kockPeter. All rights reserved.
+//  
+
+#import "HomeView.h"
+//站内消息
+#import "MassageTableViewController.h"
+
+//病例讨论
+#import "CaseDiscussViewController.h"
+
+@implementation HomeView
+
+-(void)viewWillAppear:(BOOL)animated{
+
+    [super viewWillAppear:animated];
+    [self.view endEditing:YES];
+    self.navigationController.navigationBar.hidden = YES;
+    self.tabBarController.tabBar.hidden = NO;
+    NSLog(@"----------%@",self.navigationController.viewControllers);
+   
+    //获取已添加页面的数据
+    NSUserDefaults *userDefaults=[NSUserDefaults standardUserDefaults];
+    //获取登录医生数据字典
+    NSMutableDictionary *userDic=[NSMutableDictionary new];
+    
+    userDic=[userDefaults objectForKey:@"DoctorDataDic"];
+    
+    //头像
+    NSString *headUrl=userDic[@"picFileName"];
+    headUrl=[NSString stringWithFormat:@"%@%@",NET_URLSTRING,headUrl];
+    NSString *strUrl=[headUrl stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    [self.headImage sd_setImageWithURL:[NSURL URLWithString:strUrl] placeholderImage:[UIImage imageNamed:@"默认婷婷"]];
+    
+    self.headImage.layer.masksToBounds=YES;
+    self.headImage.layer.cornerRadius=self.headImage.frame.size.height/2;
+    
+    //名字
+    self.doctorName.text= userDic[@"userName"];
+    NSDictionary *dic = [kUserDefatuel objectForKey:@"DoctorDataDic"];
+    if (dic != nil) {
+        if ([[dic objectForKey:@"state"] integerValue] == 0) {
+            _lblCertification.text = @"未认证";
+            _imageViewCertification.image = [UIImage imageNamed:@"认证v"];
+        }else if ([[dic objectForKey:@"state"] integerValue] == 1){
+            _lblCertification.text = @"认证中";
+            _imageViewCertification.image = [UIImage imageNamed:@"认证v"];
+        }else if ([[dic objectForKey:@"state"] integerValue] == 2){
+            _lblCertification.text = @"已认证";
+            _imageViewCertification.image = [UIImage imageNamed:@"V-金属"];
+        }
+        //患者总量
+        self.Totol.text = [dic objectForKey:@"totalAppointment"];
+        self.todayTotol.text = [dic objectForKey:@"appointment"];
+    }
+}
+
+
+-(void)viewDidLoad
+{
+    [super viewDidLoad];
+    
+    _readNum.userInteractionEnabled = YES;
+    _readNum.layer.cornerRadius = 8;
+    _readNum.layer.masksToBounds = YES;
+
+}
+
+- (IBAction)btnMsgZhan:(id)sender {
+    
+    //创建新增患者界面
+    UIStoryboard *storyboard=[UIStoryboard storyboardWithName:@"PersonalStoryBoard" bundle:[NSBundle mainBundle]];
+    //指定对应的故事版
+    MassageTableViewController *massageTable=[storyboard instantiateViewControllerWithIdentifier:@"MassageTableView"];
+    //推送
+    [self.navigationController pushViewController:massageTable animated:YES];
+}
+
+-(void)getAppStoreVerson{
+
+    NSString *urlStr = @"http://itunes.apple.com/lookup?id=1129179521";
+    [RequestManager postWithURLStringALL:urlStr heads:nil parameters:nil viewConroller:self success:^(id responseObject, BOOL ifTimeout) {
+        NSArray *array = responseObject[@"results"];
+        NSDictionary *dict = [array lastObject];
+        NSString *verAppStore = dict[@"version"];
+        NSString *strApp = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
+        
+        [self compareVeson:verAppStore VerApp:strApp];
+    } failure:^(NSError *error) {
+        
+    }];
+
+}
+
+-(void)compareVeson:(NSString *)appStore VerApp:(NSString *)app{
+
+    NSArray *arrayStore = [appStore componentsSeparatedByString:@"."];
+    NSArray *arrayApp = [app componentsSeparatedByString:@"."];
+    
+    if ([arrayStore[0] integerValue]>[arrayApp[0] integerValue]) {
+        [self alterNewVer:appStore];
+    }else if ([arrayStore[1] integerValue]>[arrayApp[1] integerValue])
+    {
+        [self alterNewVer:appStore];
+    }else if ([arrayStore[2] integerValue]>[arrayApp[2] integerValue]){
+        [self alterNewVer:appStore];
+    }
+}
+
+-(void)alterNewVer:(NSString *)ver{
+
+    UIAlertController *ater = [UIAlertController alertControllerWithTitle:@"提示" message:[NSString stringWithFormat:@"发现新版本:%@",ver] preferredStyle:UIAlertControllerStyleAlert];
+    [ater addAction:[UIAlertAction actionWithTitle:@"去更新" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [self openAppaleShop];
+        [self alterNewVer:ver];
+    }]];
+    [self presentViewController:ater animated:YES completion:nil];
+}
+
+- (void)openAppaleShop
+{
+    NSString *appleID = @"1129179521";
+    
+    if (isIOS7) {
+        NSString *str = [NSString stringWithFormat:@"itms-apps://itunes.apple.com/app/id%@",appleID];
+        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:str]];
+    } else {
+        NSString *str = [NSString stringWithFormat:@"itms-apps://ax.itunes.apple.com/WebObjects/MZStore.woa/wa/viewContentsUserReviews?type=Purple+Software&id=%@", appleID];
+        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:str]];
+    }
+}
+
+@end
+

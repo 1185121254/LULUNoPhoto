@@ -1,0 +1,345 @@
+//
+//  SearchPhoneViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/6/22.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "SearchPhoneViewController.h"
+#import "PhoneTableViewCell.h"
+#import "ConsultationDetailViewController.h"
+//#import "DiagnosticAdviceViewController.h"
+#import "ScrollAdviceViewController.h"
+
+@interface SearchPhoneViewController ()
+<UITableViewDelegate,UITableViewDataSource>
+{
+    UITextField *_text;
+    NSMutableArray *_arryNew;
+    
+    UITableView *_tableViewSear;
+}
+@end
+
+@implementation SearchPhoneViewController
+
+-(void)viewWillDisappear:(BOOL)animated{
+    [super viewWillDisappear:animated];
+    [[NSNotificationCenter defaultCenter]removeObserver:self];
+}
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    
+    if (_text.text == nil || [_text.text isEqualToString:@""]) {
+        NSLog(@"------");
+    }else
+    {
+        //BODY
+        //BODY
+        NSMutableDictionary *parameters=[[NSMutableDictionary alloc]init];
+        [parameters setObject:[kUserDefatuel objectForKey:@"id"] forKey:@"doctorId"];
+        [parameters setObject:_text.text forKey:@"patientName"];
+        [parameters setValue:@"2" forKey:@"orderType"];
+        MBProgressHUD *_HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+        _HUD.mode = MBProgressHUDModeIndeterminate;
+        _HUD.labelText = @"正在加载";
+        _HUD.hidden = NO;
+        [parameters setObject:@"" forKey:@"state"];
+        [RequestManager getPatientPhoneList:[NSString stringWithFormat:@"%@/api/Share/GetTextOrderList",NET_URLSTRING] Parameters:parameters Complation:^(NSMutableArray *arry) {
+            _HUD.hidden = YES;
+            _arryNew = [self shengXuPatientConPhoneS:arry];
+            [_tableViewSear reloadData];
+        } Fail:^(NSError *error) {
+            _HUD.hidden = YES;
+            kAlter(kFail);
+        }];
+    }
+    
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(onCallNowSearch:) name:@"callNow" object:nil];
+
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+
+    self.automaticallyAdjustsScrollViewInsets = NO;
+    self.title = @"电话咨询";
+    self.view.backgroundColor = kBackgroundColor;
+    
+    _text= [[UITextField alloc]initWithFrame:CGRectMake(10, 64+10, kWith-20-70, 30)];
+    _text.placeholder = @"请根据患者姓名进行搜索";
+    _text.borderStyle = UITextBorderStyleRoundedRect;
+    _text.textAlignment = 1;
+    _text.clearButtonMode = UITextFieldViewModeAlways;
+    [self.view addSubview:_text];
+    
+    UIButton  *btnSearch = [UIButton buttonWithType:UIButtonTypeCustom];
+    btnSearch.frame = CGRectMake(kWith - 70, 64+10, 60, 30);
+    [btnSearch setTitle:@"搜索" forState:UIControlStateNormal];
+    btnSearch.backgroundColor = BLUECOLOR_STYLE;
+    btnSearch.layer.cornerRadius = 3;
+    [btnSearch addTarget:self action:@selector(onBtnSearchPhone) forControlEvents:UIControlEventTouchUpInside];
+    btnSearch.layer.masksToBounds = YES;
+    [self.view addSubview:btnSearch];
+    
+    _tableViewSear = [[UITableView alloc]initWithFrame:CGRectMake(0, 114, kWith, kHeight - 114)];
+    _tableViewSear.dataSource = self;
+    _tableViewSear.backgroundColor = [UIColor clearColor];
+    _tableViewSear.delegate = self;
+    _tableViewSear.rowHeight = 81;
+    _tableViewSear.separatorStyle = UITableViewCellSeparatorStyleNone;
+    [self.view addSubview:_tableViewSear];
+    
+    [_tableViewSear registerClass:[PhoneTableViewCell class] forCellReuseIdentifier:@"SearchPhone"];
+
+}
+
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return _arryNew.count;
+}
+
+-(PhoneTableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    PhoneTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"SearchPhone" forIndexPath:indexPath];
+    PatientModel *patient = _arryNew[indexPath.row];
+    [cell.avater sd_setImageWithURL:[NSURL URLWithString:[NSString stringWithFormat:@"%@%@",NET_URLSTRING,patient.picFileName]] placeholderImage:[UIImage imageNamed:@"ic_login_account"]];
+    cell.lblName.attributedText = [self setText:[NSString stringWithFormat:@"%@  %@ %@岁",patient.patientName,[self setSec:patient.sex],patient.age]];
+    cell.lblTime.text = patient.dealTime;
+    cell.btnCallNow.tag = [patient.state integerValue] + 700;
+    
+    cell.btnOutTime.hidden                 = YES;
+    cell.lblState.text                     = @"完成时间";
+    if ([patient.state integerValue] == 6) {
+        [cell.btnCallNow setTitle:@"未拨通" forState:UIControlStateNormal];
+        cell.btnCallNow.backgroundColor = [UIColor clearColor];
+        [cell.btnCallNow setTitleColor:[UIColor redColor] forState:UIControlStateNormal];
+        cell.btnCallNow.userInteractionEnabled  =  NO;
+    }
+    else if([patient.state integerValue] == 4)
+    {
+        cell.lblTime.text = patient.modifyDate;
+        [cell.btnCallNow setTitle:@"诊断建议" forState:UIControlStateNormal];
+        [cell.btnCallNow setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        if ([patient.writeState isEqualToString:@"0"]) {
+            cell.btnCallNow.backgroundColor = [UIColor colorWithRed:59/255.0 green:174/255.0 blue:218/255.0 alpha:1];
+            cell.btnCallNow.userInteractionEnabled = YES;
+        }else{
+            cell.btnCallNow.backgroundColor = [UIColor colorWithRed:157/255.0 green:213/255.0 blue:106/255.0 alpha:1];
+            cell.btnCallNow.userInteractionEnabled = YES;
+        }
+    }else{
+        cell.lblState.text = @"预约时间:";
+        cell.lblTime.text = patient.dealTime;
+        cell.btnCallNow.backgroundColor = [UIColor colorWithRed:59/255.0 green:174/255.0 blue:218/255.0 alpha:1];
+        [cell.btnCallNow setTitle:@"现在拨通" forState:UIControlStateNormal];
+        [cell.btnCallNow setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        
+        cell.btnOutTime.hidden = [self setTime:patient.dealTime];
+        cell.btnCallNow.hidden = NO;
+    }
+    return cell;
+}
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    PatientModel *patient = _arryNew[indexPath.row];
+    ConsultationDetailViewController *con = [[ConsultationDetailViewController alloc]init];
+    con.patient = patient;
+    con.from = @"phone";
+    [self.navigationController pushViewController:con animated:YES];
+}
+
+#pragma mark-------搜索
+-(void)onBtnSearchPhone{
+    [_text resignFirstResponder];
+    [_arryNew removeAllObjects];
+    [_tableViewSear reloadData];
+    
+    NSMutableDictionary *parameters=[[NSMutableDictionary alloc]init];
+    [parameters setObject:[kUserDefatuel objectForKey:@"id"] forKey:@"doctorId"];
+    [parameters setObject:_text.text forKey:@"patientName"];
+    [parameters setValue:@"2" forKey:@"orderType"];
+    [parameters setObject:@"" forKey:@"state"];
+
+    MBProgressHUD *_HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    _HUD.mode = MBProgressHUDModeIndeterminate;
+    _HUD.labelText = @"正在加载";
+    _HUD.hidden = NO;
+    [RequestManager getPatientPhoneList:[NSString stringWithFormat:@"%@/api/Share/GetTextOrderList",NET_URLSTRING] Parameters:parameters Complation:^(NSMutableArray *arry) {
+        _HUD.hidden = YES;
+        if (arry.count ==0) {
+            kAlter(@"无结果");
+        }else
+        {
+            _arryNew = [self shengXuPatientConPhoneS:arry];
+            [_tableViewSear reloadData];
+        }
+    } Fail:^(NSError *error) {
+        _HUD.hidden = YES;
+        kAlter(kFail);
+    }];
+    
+}
+
+#pragma mark ---------通知
+-(void)onCallNowSearch:(NSNotification *)notify{
+    PhoneTableViewCell *cell = notify.object;
+    NSIndexPath *index = [_tableViewSear indexPathForCell:cell];
+    PatientModel *patient = _arryNew[index.row];
+
+    if (cell.btnCallNow.tag == 701) {
+        if ([patient.state integerValue] == 1) {
+            if (_arryNew.count > 0) {
+                NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+                [dic setObject:patient.Id forKey:@"orderId"];
+                [dic setObject:patient.doctorIM forKey:@"accId"];
+                if (patient.doctorTel == nil || [patient.doctorTel isEqualToString:@""]) {
+                    kAlter(@"医生号码为空");
+                    return;
+                }
+                if (patient.patientTel == nil || [patient.patientTel isEqualToString:@""]) {
+                    kAlter(@"患者号码为空");
+                    return;
+                }
+                [dic setObject:patient.doctorTel forKey:@"callee"];
+                [dic setObject:patient.patientTel forKey:@"caller"];
+                
+                MBProgressHUD *_HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+                _HUD.mode = MBProgressHUDModeIndeterminate;
+                _HUD.labelText = @"正在加载";
+                _HUD.hidden = NO;
+                [RequestManager callPatient:[NSString stringWithFormat:@"%@/api/ExtendApi/CallPhone",NET_URLSTRING] Parameters:dic Complation:^(NSNumber *code) {
+                    _HUD.hidden = YES;
+                    if ([code integerValue] == 10000) {
+                        UILabel *aUILabel = [[UILabel alloc]initWithFrame:CGRectMake(kWith-180, 10, 170, 25)];
+                        aUILabel.backgroundColor = BLUECOLOR_STYLE;
+                        aUILabel.backgroundColor = [UIColor colorWithRed:245/255.0 green:248/255.0 blue:250/255.0 alpha:1];
+                        aUILabel.font = [UIFont systemFontOfSize:15];
+                        [cell.contentView addSubview:aUILabel];
+                        MZTimerLabel *timer = [[MZTimerLabel alloc] initWithLabel:aUILabel andTimerType:MZTimerLabelTypeTimer];
+                        timer.timeFormat = @"距离下次拨打电话ss秒";
+                        [timer setCountDownTime:30];
+                        _tableViewSear.userInteractionEnabled = NO;
+                        [timer startWithEndingBlock:^(NSTimeInterval countTime) {
+                            [aUILabel removeFromSuperview];
+                            _tableViewSear.userInteractionEnabled = YES;
+                            NSMutableDictionary *parameters=[[NSMutableDictionary alloc]init];
+                            [parameters setObject:[kUserDefatuel objectForKey:@"id"] forKey:@"doctorId"];
+                            [parameters setValue:@"2" forKey:@"orderType"];
+                            [parameters setObject:@"" forKey:@"state"];
+                            [parameters setObject:_text.text forKey:@"patientName"];
+                            
+                            [RequestManager getPatientPhoneList:[NSString stringWithFormat:@"%@/api/Share/GetTextOrderList",NET_URLSTRING] Parameters:parameters Complation:^(NSMutableArray *arry) {
+                                _arryNew = [self shengXuPatientConPhoneS:arry];
+                                [_tableViewSear reloadData];
+                                _HUD.hidden = YES;
+                            } Fail:^(NSError *error) {
+                                _HUD.hidden = YES;
+                                kAlter(kFail);
+                            }];
+                        }];
+                    }else
+                    {
+                        kAlter(@"拨打电话失败");
+                    }
+
+                } Fail:^(NSError *error) {
+                    _HUD.hidden = YES;
+                    kAlter(@"拨打电话失败");
+                }];
+                
+            }
+        }
+    }
+    else{
+        if (_arryNew.count >0) {
+            if ([patient.writeState isEqualToString:@"0"]) {
+                ScrollAdviceViewController *dia = [[ScrollAdviceViewController alloc]init];
+                dia.patient = patient;
+                dia.from = @"BeenAA";
+                [self.navigationController pushViewController:dia animated:YES];
+            }else
+            {
+                ScrollAdviceViewController *dia = [[ScrollAdviceViewController alloc]init];
+                dia.patient = patient;
+                dia.from = @"BeenDia";
+                [self.navigationController pushViewController:dia animated:YES];
+            }
+        }
+    }
+    
+
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+#pragma mark ---------辅助方法
+-(NSString *)setSec:(NSString *)mess{
+    
+    NSString *sex;
+    if ([mess isEqualToString:@"1"]) {
+        sex = @"男";
+    }else
+    {
+        sex = @"女";
+    }
+    return sex;
+}
+
+-(BOOL)setTime:(NSString *)time{
+    NSDateFormatter *formatter = [[NSDateFormatter alloc]init];
+    [formatter setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+    NSDate *date = [formatter dateFromString:time];
+    long long AppointUnit = [date timeIntervalSince1970];
+    long long nowUnit = [[NSDate date] timeIntervalSince1970];
+    
+    if (AppointUnit < nowUnit) {
+        return NO;
+    }
+    else
+    {
+        return YES;
+    }
+}
+
+#pragma mark--------升序
+-(NSMutableArray *)shengXuPatientConPhoneS:(NSArray *)arry{
+    NSDateFormatter *dateFormatter = [NSDateFormatter new];
+    dateFormatter.dateFormat = @"yyyy-MM-dd HH:mm:ss";
+    
+    NSMutableArray * array = [NSMutableArray arrayWithArray:[arry sortedArrayUsingComparator:^NSComparisonResult(PatientModel *modelM1, PatientModel *modelM2) {
+        
+        NSDate *date1 = [dateFormatter dateFromString:modelM1.createDate];
+        NSDate *date2 = [dateFormatter dateFromString:modelM2.createDate];
+        NSComparisonResult result = [date1 compare:date2];
+        return result == NSOrderedAscending;
+    }]];
+    return array;
+}
+
+//富文本
+-(NSMutableAttributedString *)setText:(NSString *)text{
+    
+    NSArray *arry = [text componentsSeparatedByString:@"  "];
+    NSString *strUnit = arry[1];
+    
+    NSMutableAttributedString *medStr = [[NSMutableAttributedString alloc]initWithString:text];
+    [medStr addAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:13]} range:[text rangeOfString:strUnit]];
+    return medStr;
+}
+
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

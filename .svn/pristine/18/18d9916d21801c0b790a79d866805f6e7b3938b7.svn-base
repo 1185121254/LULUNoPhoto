@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="10117" systemVersion="15E65" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES">
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="10085"/>
+        <capability name="Aspect ratio constraints" minToolsVersion="5.1"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="KockImagePickSelect">
+            <connections>
+                <outlet property="btn_photograph" destination="BSn-WI-4dC" id="HHd-K3-x1a"/>
+                <outlet property="btn_picture" destination="lFg-zP-3J0" id="vFO-0c-DNh"/>
+                <outlet property="view" destination="i5M-Pr-FkT" id="sfx-zR-JGt"/>
+            </connections>
+        </placeholder>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <view clearsContextBeforeDrawing="NO" contentMode="scaleToFill" restorationIdentifier="KockImagePickSelect" id="i5M-Pr-FkT">
+            <rect key="frame" x="0.0" y="0.0" width="320" height="568"/>
+            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+            <subviews>
+                <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="TbU-Wt-sx2">
+                    <rect key="frame" x="40" y="220" width="240" height="130"/>
+                    <subviews>
+                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="BSn-WI-4dC">
+                            <rect key="frame" x="0.0" y="0.0" width="240" height="50"/>
+                            <constraints>
+                                <constraint firstAttribute="width" secondItem="BSn-WI-4dC" secondAttribute="height" multiplier="240:41" constant="-52.682926829268297" id="zSl-Qv-xhN"/>
+                            </constraints>
+                            <fontDescription key="fontDescription" type="system" pointSize="19"/>
+                            <state key="normal" title="拍照">
+                                <color key="titleColor" red="1" green="1" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                            </state>
+                            <connections>
+                                <action selector="photograph:" destination="-1" eventType="touchUpInside" id="oAb-Vr-NHK"/>
+                            </connections>
+                        </button>
+                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="lFg-zP-3J0">
+                            <rect key="frame" x="0.0" y="80" width="240" height="50"/>
+                            <constraints>
+                                <constraint firstAttribute="width" secondItem="lFg-zP-3J0" secondAttribute="height" multiplier="240:41" constant="-52.682926829268297" id="Ojg-3r-bCk"/>
+                            </constraints>
+                            <fontDescription key="fontDescription" type="system" pointSize="19"/>
+                            <state key="normal" title="本地照片">
+                                <color key="titleColor" red="1" green="1" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                            </state>
+                            <connections>
+                                <action selector="picture:" destination="-1" eventType="touchUpInside" id="sXO-GW-dw2"/>
+                            </connections>
+                        </button>
+                    </subviews>
+                    <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="calibratedRGB"/>
+                    <constraints>
+                        <constraint firstItem="BSn-WI-4dC" firstAttribute="leading" secondItem="TbU-Wt-sx2" secondAttribute="leading" id="CiR-7s-EGd"/>
+                        <constraint firstAttribute="trailing" secondItem="BSn-WI-4dC" secondAttribute="trailing" id="MD0-ki-4Ej"/>
+                        <constraint firstItem="BSn-WI-4dC" firstAttribute="top" secondItem="TbU-Wt-sx2" secondAttribute="top" id="RZ2-Vs-MBE"/>
+                        <constraint firstAttribute="height" constant="130" id="VPv-eW-4Zb"/>
+                        <constraint firstAttribute="width" secondItem="TbU-Wt-sx2" secondAttribute="height" multiplier="240:83" constant="-135.90361445783134" id="Yb7-Cp-jZI"/>
+                        <constraint firstItem="BSn-WI-4dC" firstAttribute="trailing" secondItem="lFg-zP-3J0" secondAttribute="trailing" id="ktN-Aa-2tf"/>
+                        <constraint firstItem="lFg-zP-3J0" firstAttribute="top" secondItem="BSn-WI-4dC" secondAttribute="bottom" constant="30" id="mD4-0P-m4l"/>
+                        <constraint firstItem="BSn-WI-4dC" firstAttribute="leading" secondItem="lFg-zP-3J0" secondAttribute="leading" id="zWT-oQ-GJs"/>
+                    </constraints>
+                </view>
+            </subviews>
+            <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.15253232758620688" colorSpace="calibratedRGB"/>
+            <constraints>
+                <constraint firstItem="TbU-Wt-sx2" firstAttribute="centerY" secondItem="i5M-Pr-FkT" secondAttribute="centerY" constant="1" id="HmD-7B-NW5"/>
+                <constraint firstItem="TbU-Wt-sx2" firstAttribute="centerX" secondItem="i5M-Pr-FkT" secondAttribute="centerX" id="LGZ-AU-gUY"/>
+                <constraint firstAttribute="trailing" secondItem="TbU-Wt-sx2" secondAttribute="trailing" constant="40" id="WZz-fX-3jx"/>
+                <constraint firstItem="TbU-Wt-sx2" firstAttribute="leading" secondItem="i5M-Pr-FkT" secondAttribute="leading" constant="40" id="etM-rF-JaE"/>
+            </constraints>
+            <simulatedScreenMetrics key="simulatedDestinationMetrics" type="retina4"/>
+        </view>
+    </objects>
+</document>

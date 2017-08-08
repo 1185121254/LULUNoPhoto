@@ -1,0 +1,30 @@
+//
+//  MessageCustomCell.h
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/8/12.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface MessageCustomCell : UITableViewCell
+
+@property (weak, nonatomic) IBOutlet UIButton *avter;
+
+@property (weak, nonatomic) IBOutlet UIImageView *qiPao;
+
+@property (weak, nonatomic) IBOutlet UILabel *name;
+
+@property (weak, nonatomic) IBOutlet UILabel *line;
+
+@property (weak, nonatomic) IBOutlet UILabel *connect;
+
+@property (weak, nonatomic) IBOutlet UILabel *nameAvDown;
+
+@property (weak, nonatomic) IBOutlet UIButton *patientTel;
+
+
+-(void)messageCustomCell:(NSDictionary *)dic  AvterURL:(NSString *)url;
+
+@end

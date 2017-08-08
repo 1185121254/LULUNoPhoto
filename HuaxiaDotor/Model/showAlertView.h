@@ -1,0 +1,29 @@
+//
+//  showAlertView.h
+//  HuaxiaDotor
+//
+//  Created by kock on 16/3/24.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface showAlertView : NSObject
+
+/**
+ *  显示简单的文字提示
+ *
+ *  @param message 文字提示
+ */
++(void)showAlertViewWithMessage:(NSString *)message;
+
+/**
+ *  只有文字提示
+ *
+ *  @param OnlyMessage 文字提示
+ */
++(void)showAlertViewWithOnlyMessage:(NSString *)OnlyMessage;
+
++(void)showAlertviewWithView:(UIView *)contentView confirmAction:(void (^)())confirmAction;
+
+@end

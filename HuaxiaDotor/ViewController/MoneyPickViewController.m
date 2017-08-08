@@ -1,0 +1,254 @@
+//
+//  MoneyPickViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/6/12.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "MoneyPickViewController.h"
+#import "MoneyDetailCollectionViewCell.h"
+#import "MoneyDetailViewController.h"
+#import "MoneytypeViewController.h"
+
+@interface MoneyPickViewController ()<UICollectionViewDelegate,UICollectionViewDataSource>
+{
+    UILabel *_lblMoney;
+    UICollectionView *_collectionView;
+    NSDictionary *_dicData;
+    
+}
+@end
+
+@implementation MoneyPickViewController
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    
+    self.navigationController.navigationBar.hidden = YES;
+
+}
+
+-(void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    self.navigationController.navigationBar.hidden = NO;
+
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.view.backgroundColor = kBackgroundColor;
+    PublishNav *publish= [[PublishNav alloc]init];
+    publish.title.text = @"我的钱包";
+    [publish.leftBtn addTarget:self action:@selector(onLeftBack) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:publish];
+    self.automaticallyAdjustsScrollViewInsets = NO;
+    
+    [self creatHeader];
+    
+    UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc]init];
+    layout.sectionInset = UIEdgeInsetsMake(0, 0.5, 0, 0.5);
+    layout.itemSize = CGSizeMake((kWith-2)/2, 70);
+    layout.minimumLineSpacing = 1;
+    layout.minimumInteritemSpacing = 1;
+    layout.headerReferenceSize = CGSizeMake(kWith, 30);
+    
+    _collectionView = [[UICollectionView alloc]initWithFrame:CGRectMake(0, 210, kWith, 70*2+30 +2) collectionViewLayout:layout];
+    _collectionView.backgroundColor = kBoradColor;
+    _collectionView.dataSource = self;
+    _collectionView.delegate = self;
+    [self.view addSubview:_collectionView];
+ 
+    [_collectionView registerClass:[MoneyDetailCollectionViewCell class] forCellWithReuseIdentifier:@"collectMoney"];
+    [_collectionView registerClass:[UICollectionReusableView class] forSupplementaryViewOfKind:UICollectionElementKindSectionHeader
+               withReuseIdentifier:@"HeaderViewMoney"];
+
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    [dic setObject:[kUserDefatuel objectForKey:@"id"] forKey:@"doctorId"];
+
+    
+    [RequestManager getWithURLStringALL:[NSString stringWithFormat:@"%@/api/Share/GetWalletSum",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:dic viewConroller:self success:^(id responseObject) {
+        NSDictionary *dicV = (NSDictionary *)responseObject;
+
+        _dicData = dicV;
+        _lblMoney.attributedText = [self setTotalSumMoney:[NSString stringWithFormat:@"我的余额（元）\n%.2f",[[_dicData objectForKey:@"walletSum"] floatValue]]];
+        [_collectionView reloadData];
+    } failure:^(NSError *error) {
+
+    }];
+}
+
+-(void)creatHeader{
+    _lblMoney = [[UILabel alloc]initWithFrame:CGRectMake(0, 60, kWith, 150)];
+    _lblMoney.backgroundColor = BLUECOLOR_STYLE;
+    _lblMoney.textColor = [UIColor whiteColor];
+    _lblMoney.textAlignment = 1;
+    _lblMoney.numberOfLines = 0;
+    _lblMoney.attributedText = [self setTotalSumMoney:@"我的余额（元）\n0.00"];
+    _lblMoney.font = [UIFont systemFontOfSize:15];
+    [self.view addSubview:_lblMoney];
+    
+    UIControl *coll = [[UIControl alloc]initWithFrame:_lblMoney.frame];
+    [coll addTarget:self action:@selector(onColler) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:coll];
+    
+}
+
+-(UICollectionReusableView *)collectionView:(UICollectionView *)collectionView viewForSupplementaryElementOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath{
+    
+    UICollectionReusableView *reusableView = nil;
+    if ([kind isEqualToString:UICollectionElementKindSectionHeader]) {
+        
+        reusableView = [collectionView dequeueReusableSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:@"HeaderViewMoney" forIndexPath:indexPath];
+        UILabel *lbl = [[UILabel alloc]initWithFrame:CGRectMake(10, 0, kWith - 20, 30)];
+        lbl.text = @"收入明细";
+        reusableView.backgroundColor = [UIColor whiteColor];
+        lbl.textColor = kBoradColor;
+        lbl.font = [UIFont systemFontOfSize:15];
+        
+        UILabel *lblLine = [[UILabel alloc]initWithFrame:CGRectMake(0, 30, kWith, 1)];
+        lblLine.backgroundColor = kBoradColor;
+        [reusableView addSubview:lblLine];
+        
+        [reusableView addSubview:lbl];
+    }
+    return reusableView;
+}
+
+-(NSInteger)numberOfSectionsInCollectionView:(UICollectionView *)collectionView{
+    return 1;
+}
+
+-(NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section{
+    return 4;
+}
+
+-(UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath{
+
+   MoneyDetailCollectionViewCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"collectMoney" forIndexPath:indexPath];
+    cell.backgroundColor = [UIColor whiteColor];
+    if (indexPath.item == 0) {
+        cell.lblColor.backgroundColor = [UIColor colorWithRed:243/255.0 green:149/255.0 blue:48/255.0 alpha:1];
+        if ([_dicData objectForKey:@"textSum"]==nil) {
+            cell.lblPrice.text = @"0.00";
+        }else
+        {
+            cell.lblPrice.text = [NSString stringWithFormat:@"%.2f",[[_dicData objectForKey:@"textSum"] floatValue]];
+        }
+        if ([_dicData objectForKey:@"textCount"]==nil) {
+            cell.lblType.attributedText = [self setTypeStr:@"图文咨询  0次"];
+        }else{
+            cell.lblType.attributedText = [self setTypeStr:[NSString stringWithFormat:@"图文咨询  %@次",[_dicData objectForKey:@"textCount"]]];
+        }
+    }
+    else if (indexPath.item == 1){
+        cell.lblColor.backgroundColor = [UIColor colorWithRed:48/255.0 green:128/255.0 blue:237/255.0 alpha:1];
+        if ([_dicData objectForKey:@"phoneSum"]==nil) {
+            cell.lblPrice.text = @"0.00";
+        }else
+        {
+            cell.lblPrice.text = [NSString stringWithFormat:@"%.2f",[[_dicData objectForKey:@"phoneSum"] floatValue]];
+        }
+        if ([_dicData objectForKey:@"phoneCount"]==nil) {
+            cell.lblType.attributedText = [self setTypeStr:@"电话咨询  0次"];
+        }else{
+            cell.lblType.attributedText = [self setTypeStr:[NSString stringWithFormat:@"电话咨询  %@次",[_dicData objectForKey:@"phoneCount"]]];
+        }
+        
+    }
+    else if (indexPath.item == 2){
+        cell.lblColor.backgroundColor = [UIColor colorWithRed:105/255.0 green:193/255.0 blue:81/255.0 alpha:1];
+        if ([_dicData objectForKey:@"videoSum"]==nil) {
+            cell.lblPrice.text = @"0.00";
+        }else
+        {
+            cell.lblPrice.text = [NSString stringWithFormat:@"%.2f",[[_dicData objectForKey:@"videoSum"] floatValue]];
+        }
+        if ([_dicData objectForKey:@"videoCount"]==nil) {
+            cell.lblType.attributedText = [self setTypeStr:@"视频咨询  0次"];
+        }else{
+            cell.lblType.attributedText = [self setTypeStr:[NSString stringWithFormat:@"视频咨询  %@次",[_dicData objectForKey:@"videoCount"]]];
+        }
+        
+    }
+    else if (indexPath.item == 3){
+        cell.lblColor.backgroundColor = [UIColor colorWithRed:238/255.0 green:84/255.0 blue:100/255.0 alpha:1];
+        if ([_dicData objectForKey:@"xtrSum"]==nil) {
+            cell.lblPrice.text = @"0.00";
+        }else
+        {
+            cell.lblPrice.text = [NSString stringWithFormat:@"%.2f",[[_dicData objectForKey:@"xtrSum"] floatValue]];
+        }
+        if ([_dicData objectForKey:@"xtrCount"]==nil) {
+            cell.lblType.attributedText = [self setTypeStr:@"加号预约  0次"];
+        }else{
+            cell.lblType.attributedText = [self setTypeStr:[NSString stringWithFormat:@"加号预约  %@次",[_dicData objectForKey:@"xtrCount"]]];
+        }
+    }
+    return cell;
+}
+
+-(void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath{
+
+    MoneytypeViewController *money = [[MoneytypeViewController alloc]init];
+    money.type = [NSString stringWithFormat:@"%ld",indexPath.item+1];
+    [self.navigationController pushViewController:money animated:YES];
+    
+}
+
+#pragma mark---------余额
+-(void)onColler{
+
+    MoneyDetailViewController *detal = [[MoneyDetailViewController alloc]init];
+    [self.navigationController pushViewController:detal animated:YES];
+    
+}
+
+#pragma mark---------辅助方法
+-(NSMutableAttributedString *)setTypeStr:(NSString *)text{
+
+    NSArray *arry = [text componentsSeparatedByString:@"  "];
+    NSString *strUnit = arry[1];
+    
+    NSMutableAttributedString *medStr = [[NSMutableAttributedString alloc]initWithString:text];
+    [medStr addAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:14],NSForegroundColorAttributeName:kBoradColor} range:[text rangeOfString:strUnit]];
+    return medStr;
+}
+
+-(NSMutableAttributedString *)setTotalSumMoney:(NSString *)text{
+
+    NSArray *arry = [text componentsSeparatedByString:@"\n"];
+    NSString *strUnit = arry[1];
+    
+//    NSMutableParagraphStyle * paragraphStyle1 = [[NSMutableParagraphStyle alloc] init];
+//    [paragraphStyle1 setLineSpacing:15];
+    
+    NSMutableAttributedString *medStr = [[NSMutableAttributedString alloc]initWithString:text];
+    [medStr addAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:30]} range:[text rangeOfString:strUnit]];
+    return medStr;
+}
+#pragma mark--------回跳
+-(void)onLeftBack{
+    
+    [self.navigationController popViewControllerAnimated:YES];
+    
+}
+
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

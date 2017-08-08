@@ -1,0 +1,22 @@
+//
+//  NSString+CellTxtHeight.h
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/7/26.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface NSString (CellTxtHeight)
+
++(CGFloat)cellHeight:(NSString *)text;
+
++(NSArray *)shengXuPatientConC:(NSArray *)arry;
+
+#pragma mark--------富文本
++(NSAttributedString *)richTextOldStr:(NSString *)oldText SeparatedByString:(NSString *)sepStr strUnit:(NSInteger)wave textFont:(UIFont *)font textForgColor:(UIColor *)color;
+
+#pragma mark--------下载路径
++(NSURL *)downLoadFile:(NSString *)patientName FileNmae:(NSString *)title;
+@end

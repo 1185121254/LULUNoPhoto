@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="10117" systemVersion="15E65" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES">
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="10085"/>
+    </dependencies>
+    <scenes>
+        <!--学术前沿-->
+        <scene sceneID="wVB-4r-aeF">
+            <objects>
+                <viewController storyboardIdentifier="AcademicThat" id="7th-9B-cWu" customClass="AcademicThatViewController" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="wJH-CN-8S2"/>
+                        <viewControllerLayoutGuide type="bottom" id="OnH-78-ey2"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="Z6o-V6-P6H">
+                        <rect key="frame" x="0.0" y="0.0" width="320" height="568"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="PVV-qH-hLz">
+                                <rect key="frame" x="0.0" y="72" width="320" height="35"/>
+                                <color key="backgroundColor" white="0.75" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="35" id="YL0-uT-WPy"/>
+                                </constraints>
+                            </view>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="fqd-rS-XFd">
+                                <rect key="frame" x="0.0" y="64" width="79" height="50"/>
+                                <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="50" id="GgD-xB-NLg"/>
+                                </constraints>
+                                <color key="tintColor" red="1" green="1" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                                <state key="normal" title="科普文章">
+                                    <color key="titleColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
+                                    <color key="titleShadowColor" red="1" green="1" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                                </state>
+                                <state key="selected">
+                                    <color key="titleColor" red="0.23137254901960785" green="0.68627450980392157" blue="0.85098039215686272" alpha="1" colorSpace="calibratedRGB"/>
+                                </state>
+                                <connections>
+                                    <action selector="btnAction_science:" destination="7th-9B-cWu" eventType="touchUpInside" id="Hi0-QV-jcQ"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Cqo-PS-MAp">
+                                <rect key="frame" x="80" y="64" width="79" height="50"/>
+                                <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="50" id="CJN-dG-rht"/>
+                                </constraints>
+                                <color key="tintColor" red="1" green="1" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                                <state key="normal" title="眼科咨询">
+                                    <color key="titleColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
+                                </state>
+                                <state key="selected">
+                                    <color key="titleColor" red="0.23137254901960785" green="0.68627450980392157" blue="0.85098039215686272" alpha="1" colorSpace="calibratedRGB"/>
+                                </state>
+                                <connections>
+                                    <action selector="btnConsulting:" destination="7th-9B-cWu" eventType="touchUpInside" id="wUg-7y-ihr"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="jlU-Fa-IaA">
+                                <rect key="frame" x="160" y="64" width="79" height="50"/>
+                                <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="50" id="zAO-Li-yBe"/>
+                                </constraints>
+                                <color key="tintColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                <state key="normal" title="学术会议">
+                                    <color key="titleColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
+                                </state>
+                                <state key="selected">
+                                    <color key="titleColor" red="0.23137254901960785" green="0.68627450980392157" blue="0.85098039215686272" alpha="1" colorSpace="calibratedRGB"/>
+                                </state>
+                                <connections>
+                                    <action selector="btnMetting:" destination="7th-9B-cWu" eventType="touchUpInside" id="lO3-iU-ybV"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="kqw-xs-rmM">
+                                <rect key="frame" x="240" y="64" width="80" height="50"/>
+                                <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="50" id="zL2-nS-bxk"/>
+                                </constraints>
+                                <color key="tintColor" red="1" green="1" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                                <state key="normal" title="业界新闻">
+                                    <color key="titleColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
+                                </state>
+                                <state key="selected">
+                                    <color key="titleColor" red="0.23137254901960785" green="0.68627450980392157" blue="0.85098039215686272" alpha="1" colorSpace="calibratedRGB"/>
+                                </state>
+                                <connections>
+                                    <action selector="btnNews:" destination="7th-9B-cWu" eventType="touchUpInside" id="4eq-Rg-B12"/>
+                                </connections>
+                            </button>
+                        </subviews>
+                        <color key="backgroundColor" red="0.93725490199999995" green="0.93725490199999995" blue="0.95686274510000002" alpha="1" colorSpace="calibratedRGB"/>
+                        <constraints>
+                            <constraint firstItem="Cqo-PS-MAp" firstAttribute="top" secondItem="wJH-CN-8S2" secondAttribute="bottom" id="2Dy-vf-9YT"/>
+                            <constraint firstItem="kqw-xs-rmM" firstAttribute="leading" secondItem="jlU-Fa-IaA" secondAttribute="trailing" constant="1" id="37N-Wr-YFm"/>
+                            <constraint firstItem="kqw-xs-rmM" firstAttribute="height" secondItem="fqd-rS-XFd" secondAttribute="height" id="5eN-67-cja"/>
+                            <constraint firstAttribute="trailing" secondItem="kqw-xs-rmM" secondAttribute="trailing" id="67q-rB-cJq"/>
+                            <constraint firstItem="fqd-rS-XFd" firstAttribute="top" secondItem="wJH-CN-8S2" secondAttribute="bottom" id="89X-Vh-2Qp"/>
+                            <constraint firstItem="Cqo-PS-MAp" firstAttribute="leading" secondItem="fqd-rS-XFd" secondAttribute="trailing" constant="1" id="A9c-WE-bX9"/>
+                            <constraint firstItem="jlU-Fa-IaA" firstAttribute="height" secondItem="fqd-rS-XFd" secondAttribute="height" id="AC7-1g-WDy"/>
+                            <constraint firstAttribute="trailing" secondItem="PVV-qH-hLz" secondAttribute="trailing" id="Cf4-FB-Br6"/>
+                            <constraint firstItem="jlU-Fa-IaA" firstAttribute="width" secondItem="fqd-rS-XFd" secondAttribute="width" id="DWy-wL-B6E"/>
+                            <constraint firstItem="jlU-Fa-IaA" firstAttribute="leading" secondItem="Cqo-PS-MAp" secondAttribute="trailing" constant="1" id="J8G-OA-mAI"/>
+                            <constraint firstItem="PVV-qH-hLz" firstAttribute="leading" secondItem="Z6o-V6-P6H" secondAttribute="leading" id="Jrv-Vn-QnT"/>
+                            <constraint firstItem="PVV-qH-hLz" firstAttribute="top" secondItem="wJH-CN-8S2" secondAttribute="bottom" constant="8" id="V6D-RH-BoJ"/>
+                            <constraint firstItem="Cqo-PS-MAp" firstAttribute="width" secondItem="fqd-rS-XFd" secondAttribute="width" id="cH4-ug-dkI"/>
+                            <constraint firstItem="kqw-xs-rmM" firstAttribute="top" secondItem="wJH-CN-8S2" secondAttribute="bottom" id="dwS-li-faL"/>
+                            <constraint firstItem="kqw-xs-rmM" firstAttribute="width" secondItem="fqd-rS-XFd" secondAttribute="width" constant="1" id="eCd-MM-ONi"/>
+                            <constraint firstItem="Cqo-PS-MAp" firstAttribute="height" secondItem="fqd-rS-XFd" secondAttribute="height" id="hRT-cH-Mc5"/>
+                            <constraint firstItem="jlU-Fa-IaA" firstAttribute="top" secondItem="wJH-CN-8S2" secondAttribute="bottom" id="opf-cI-Gd2"/>
+                            <constraint firstItem="Cqo-PS-MAp" firstAttribute="leading" secondItem="fqd-rS-XFd" secondAttribute="trailing" constant="1" id="qJ0-2C-3LG"/>
+                            <constraint firstItem="fqd-rS-XFd" firstAttribute="leading" secondItem="Z6o-V6-P6H" secondAttribute="leading" id="thM-Wb-jVQ"/>
+                            <constraint firstItem="kqw-xs-rmM" firstAttribute="leading" secondItem="jlU-Fa-IaA" secondAttribute="trailing" constant="1" id="wFU-uq-8IX"/>
+                            <constraint firstItem="jlU-Fa-IaA" firstAttribute="leading" secondItem="Cqo-PS-MAp" secondAttribute="trailing" constant="1" id="xqY-Bt-fmU"/>
+                        </constraints>
+                    </view>
+                    <navigationItem key="navigationItem" title="学术前沿" id="pG8-Ut-5ZQ"/>
+                    <simulatedScreenMetrics key="simulatedDestinationMetrics" type="retina4"/>
+                    <connections>
+                        <outlet property="btn_Consulting" destination="Cqo-PS-MAp" id="ORV-FG-wkp"/>
+                        <outlet property="btn_Meeting" destination="jlU-Fa-IaA" id="tg8-gu-S0q"/>
+                        <outlet property="btn_News" destination="kqw-xs-rmM" id="iaX-Hc-ipj"/>
+                        <outlet property="btn_science" destination="fqd-rS-XFd" id="Hc8-Yl-8Lj"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="MxR-bR-HgB" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="803" y="207"/>
+        </scene>
+        <!--Navigation Controller-->
+        <scene sceneID="c83-2t-tAm">
+            <objects>
+                <navigationController id="REs-yj-YCh" sceneMemberID="viewController">
+                    <simulatedScreenMetrics key="simulatedDestinationMetrics" type="retina4"/>
+                    <navigationBar key="navigationBar" contentMode="scaleToFill" id="wZf-B1-PNg">
+                        <rect key="frame" x="0.0" y="0.0" width="320" height="44"/>
+                        <autoresizingMask key="autoresizingMask"/>
+                    </navigationBar>
+                    <connections>
+                        <segue destination="7th-9B-cWu" kind="relationship" relationship="rootViewController" id="dfh-FB-hbS"/>
+                    </connections>
+                </navigationController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="6db-eg-k0e" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="423" y="186"/>
+        </scene>
+    </scenes>
+</document>

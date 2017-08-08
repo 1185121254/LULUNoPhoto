@@ -1,0 +1,392 @@
+//
+//  CaseDocListViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/5/25.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "CaseDocListViewController.h"
+#import "CasePersonViewController.h"
+#import "AddCaseViewController.h"
+#import "CaseCommentViewController.h"
+
+@interface CaseDocListViewController ()<UITableViewDelegate,UITableViewDataSource,UIScrollViewDelegate>
+{
+    NSMutableArray *_arryData;
+    NSMutableArray *_arrySelected;
+    
+    UITableView *_tableView;
+    
+    UILabel *_lblAll;
+    UIScrollView *_Sc;
+    UITextField *_textSearch;
+    UIButton *_btnAllSelected;
+}
+@end
+
+@implementation CaseDocListViewController
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    
+    if ([self.from isEqualToString:@"CommPerson"]) {
+        _arrySelected = [NSMutableArray array];
+    }else
+    {
+        _arrySelected = [NSMutableArray array];
+        [_arrySelected addObjectsFromArray:_arryS];
+        [self creatSelectedDoc:_arrySelected];
+    }
+}
+
+
+-(void)dealloc{
+    [[NSNotificationCenter defaultCenter]removeObserver:self];
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    _arryData = [NSMutableArray array];
+    self.view.backgroundColor = kBackgroundColor;
+    self.title = @"我的医生列表";
+    
+    UILabel *lbl = [[UILabel alloc]initWithFrame:CGRectMake(0, 64, kWith, 30)];
+    lbl.backgroundColor = [UIColor whiteColor];
+    [self.view addSubview:lbl];
+    
+    _textSearch = [[UITextField alloc]initWithFrame:CGRectMake(20, 64, kWith-40, 30)];
+    _textSearch.placeholder = @"🔍输入患者相关信息";
+    _textSearch.textAlignment = 1;
+    _textSearch.backgroundColor = [UIColor whiteColor];
+    _textSearch.borderStyle = UITextBorderStyleNone;
+    _textSearch.font = [UIFont systemFontOfSize:15];
+    [self.view addSubview:_textSearch];
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(onNotifySearchText) name:UITextFieldTextDidEndEditingNotification object:nil];
+    
+    [self creatHeader];
+    
+    UIBarButtonItem *rightCaseDocList = [[UIBarButtonItem alloc]initWithTitle:@"确定" style:UIBarButtonItemStylePlain target:self action:@selector(onCAseDocPlist)];
+    self.navigationItem.rightBarButtonItem = rightCaseDocList;
+    [_tableView registerClass:[UITableViewCell class] forCellReuseIdentifier:@"CaseSelected"];
+    
+    NSUserDefaults *userDefaults=[NSUserDefaults standardUserDefaults];
+    NSString *verifyCode;
+    verifyCode=[userDefaults objectForKey:@"verifyCode"];
+    NSString *userID;
+    userID = [userDefaults objectForKey:@"id"];
+    NSDictionary *heads=@{RESPONSE_KEY_VERIFYCODE:verifyCode};
+    NSMutableDictionary *parameters=[[NSMutableDictionary alloc]init];
+    [parameters setObject:userID forKey:@"doctorId"];
+    [parameters setObject:@"" forKey:@"doctorName"];
+    MBProgressHUD *_HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    _HUD.mode = MBProgressHUDModeIndeterminate;
+    _HUD.labelText = @"正在加载";
+    _HUD.hidden = NO;
+    [RequestManager getWithURLString:CHEACK_FRIEND_LIST heads:heads parameters:parameters success:^(id responseObject)
+     {
+         if ([self.from isEqualToString:@"CommPerson"]) {
+             _arryData = [self judgeRepeat:responseObject[@"value"]];
+         }
+         else
+         {
+             NSMutableArray *arryNew = [NSMutableArray array];
+             for (NSDictionary *dicNew in responseObject[@"value"]) {
+                 if ([dicNew objectForKey:@"userName"]!=nil) {
+                     [arryNew addObject:dicNew];
+                 }
+             }
+             _arryData = arryNew;
+         }
+         [_tableView reloadData];
+         _HUD.hidden = YES;
+     } failure:^(NSError *error) {
+         _HUD.hidden = YES;
+         kAlter(kFail);
+     }];
+
+    _Sc = [[UIScrollView alloc]initWithFrame:CGRectMake(0, 100, kWith, 50)];
+    _Sc.backgroundColor = [UIColor whiteColor];
+    [self.view addSubview:_Sc];
+    
+}
+
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return _arryData.count;
+}
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"CaseSelected" forIndexPath:indexPath];
+    
+    NSDictionary *dic = _arryData[indexPath.row];
+    if ([_arrySelected containsObject:dic]) {
+        cell.accessoryType = UITableViewCellAccessoryCheckmark;
+    }
+    else
+    {
+        cell.accessoryType = UITableViewCellAccessoryNone;
+    }
+    
+    NSString *yrl = [NSString stringWithFormat:@"%@%@",NET_URLSTRING,[dic objectForKey:@"picFileName"]];
+    NSString *url = [yrl stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    [cell.imageView sd_setImageWithURL:[NSURL URLWithString:url] placeholderImage:[UIImage imageNamed:@"ic_login_account"]];
+    cell.imageView.layer.cornerRadius = 22;
+    cell.imageView.layer.masksToBounds = YES;
+    cell.textLabel.text = [dic objectForKey:@"userName"];
+    return cell;
+}
+
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    UITableViewCell *cell = [tableView cellForRowAtIndexPath:indexPath];
+    NSDictionary *dic = _arryData[indexPath.row];
+    if (cell.accessoryType == UITableViewCellAccessoryCheckmark) {
+        cell.accessoryType = UITableViewCellAccessoryNone;
+        [_arrySelected removeObject:dic];
+    }
+    else
+    {
+        cell.accessoryType = UITableViewCellAccessoryCheckmark;
+        [_arrySelected addObject:dic];
+    }
+    [self creatSelectedDoc:_arrySelected];
+}
+
+-(void)onBtnAllSelected:(UIButton *)btn{
+
+    if (btn.selected == NO) {
+        
+        [_arrySelected removeAllObjects];
+        [_arrySelected addObjectsFromArray:_arryData];
+        _lblAll.text = @"反选";
+        btn.selected = YES;
+    }
+    else
+    {
+        [_arrySelected removeAllObjects];
+        _lblAll.text = @"全选";
+        btn.selected = NO;
+    }
+    [self creatSelectedDoc:_arrySelected];
+    [_tableView reloadData];
+    
+}
+
+-(void)creatSelectedDoc:(NSMutableArray *)arry{
+
+    for (UIView *view in _Sc.subviews) {
+        [view removeFromSuperview];
+    }
+    if (_arryData.count==0 && _arrySelected.count== 0) {
+        _btnAllSelected.selected = NO;
+    }else
+    {
+        if (_arryData.count==_arrySelected.count) {
+            _btnAllSelected.selected = YES;
+        }else
+        {
+            _btnAllSelected.selected = NO;
+        }
+    }
+
+    for (NSInteger i = 0; i < arry.count; i++) {
+        
+        NSDictionary *dic = arry[i];
+        UIImageView *image =[[UIImageView alloc]init];
+        image.frame = CGRectMake(10+(40+10)*i, 5, 40, 40);
+        NSString *yrl = [NSString stringWithFormat:@"%@%@",NET_URLSTRING,[dic objectForKey:@"picFileName"]];
+        NSString *url = [yrl stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+        [image sd_setImageWithURL:[NSURL URLWithString:url] placeholderImage:[UIImage imageNamed:@"ic_login_account"]];
+        image.layer.cornerRadius = 20;
+        image.layer.masksToBounds = YES;
+        [_Sc addSubview:image];
+        
+    }
+    _Sc.contentSize = CGSizeMake(10+(40+10)*arry.count, 0);
+    
+}
+
+-(void)creatHeader{
+    UIView *bottomView = [[UIView alloc]initWithFrame:CGRectMake(0, 156, kWith, 30)];
+    bottomView.backgroundColor = [UIColor whiteColor];
+    [self.view addSubview:bottomView];
+    
+    _btnAllSelected = [UIButton buttonWithType:UIButtonTypeCustom];
+    [_btnAllSelected setBackgroundImage:[UIImage imageNamed:@"i圈"] forState:UIControlStateNormal];
+    [_btnAllSelected setBackgroundImage:[UIImage imageNamed:@"i圈_h"] forState:UIControlStateSelected];
+    _btnAllSelected .frame = CGRectMake(10, 5, 20, 20);
+    _btnAllSelected.selected = NO;
+    [_btnAllSelected addTarget:self action:@selector(onBtnAllSelected:) forControlEvents:UIControlEventTouchUpInside];
+    [bottomView addSubview:_btnAllSelected];
+    
+    _lblAll= [[UILabel alloc]initWithFrame:CGRectMake(35, 5, 50, 20)];
+    _lblAll.text = @"全选";
+    _lblAll.font = [UIFont systemFontOfSize:13];
+    [bottomView addSubview:_lblAll];
+    
+    _tableView = [[UITableView alloc]initWithFrame:CGRectMake(0, 192, kWith, kHeight - 192)];
+    _tableView.dataSource = self;
+    _tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    _tableView.delegate = self;
+    [self.view addSubview:_tableView];
+}
+
+
+-(void)onCAseDocPlist{
+
+    if ([self.from isEqualToString:@"CommPerson"]) {
+        
+        NSMutableArray *arryInvite = [NSMutableArray array];
+        for (NSDictionary *dic in _arrySelected) {
+            NSString *str = [NSString stringWithFormat:@"d%@",[dic objectForKey:@"loginId"]];
+            [arryInvite addObject:str];
+        }
+        
+        MBProgressHUD *_HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+        _HUD.mode = MBProgressHUDModeIndeterminate;
+        _HUD.labelText = @"正在加载";
+        _HUD.hidden = NO;
+        [[NIMSDK sharedSDK].teamManager addUsers:arryInvite toTeam:self.teamID postscript:@"请你入群" completion:^(NSError *error, NSArray *members) {
+            if (!error) {
+                
+                NSMutableDictionary *dicRequset = [NSMutableDictionary dictionary];
+                NSMutableArray *arryInviteNoD = [NSMutableArray array];
+                for (NSDictionary *dic in _arrySelected) {
+                    NSString *str = [dic objectForKey:@"loginId"];
+                    [arryInviteNoD addObject:str];
+                }
+                NSString *member = [arryInviteNoD componentsJoinedByString:@","];
+                [dicRequset setObject:member forKey:@"memberId"];
+                [dicRequset setObject:self.disId forKey:@"disId"];
+                [RequestManager intiveNewPerson:[NSString stringWithFormat:@"%@/api/Doctor/DiscussionMemberAdd",NET_URLSTRING] Parameters:dicRequset Complation:^(NSNumber *code) {
+                    _HUD.hidden = YES;
+                    if ([code integerValue] == 10000) {
+                        NSArray *arry = self.navigationController.viewControllers;
+                        
+                        if (arry.count == 5) {
+                            CaseCommentViewController *caseComm = arry[2];
+                            [caseComm sendDoctorMessage:@"欢迎进入本群"];
+                            CasePersonViewController *per = arry[3];
+                            per.arryAdd = _arrySelected;
+                            [self.navigationController popToViewController:per animated:YES];
+                        }else if (arry.count == 6){
+                            CaseCommentViewController *caseComm = arry[3];
+                            [caseComm sendDoctorMessage:@"欢迎进入本群"];
+                            CasePersonViewController *per = arry[4];
+                            per.arryAdd = _arrySelected;
+                            [self.navigationController popToViewController:per animated:YES];
+                        }
+                    }
+
+                } Fail:^(NSError *error) {
+                    _HUD.hidden = YES;
+                    kAlter(kFail);
+                }];
+            }
+            else{
+                _HUD.hidden =YES;
+                NSLog(@"%@",error);
+                kAlter(@"邀请失败");
+            }
+        }];
+        
+    }
+    else
+    {
+    
+        [[NSNotificationCenter defaultCenter]postNotificationName:@"CASEFriends" object:_arrySelected];
+        [self.navigationController popViewControllerAnimated:YES];
+        
+    }
+}
+
+
+#pragma mark------搜索
+- (void)onNotifySearchText{
+    if (_textSearch.text != nil) {
+        [_arryData removeAllObjects];
+        [_tableView reloadData];
+        
+        NSUserDefaults *userDefaults=[NSUserDefaults standardUserDefaults];
+        NSString *verifyCode;
+        verifyCode=[userDefaults objectForKey:@"verifyCode"];
+        NSString *userID;
+        userID = [userDefaults objectForKey:@"id"];
+        NSDictionary *heads=@{RESPONSE_KEY_VERIFYCODE:verifyCode};
+        NSMutableDictionary *parameters=[[NSMutableDictionary alloc]init];
+        [parameters setObject:userID forKey:@"doctorId"];
+        [parameters setObject:_textSearch.text forKey:@"doctorName"];
+        MBProgressHUD *_HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+        _HUD.mode = MBProgressHUDModeIndeterminate;
+        _HUD.labelText = @"正在加载";
+        _HUD.hidden = NO;
+        [RequestManager getWithURLString:CHEACK_FRIEND_LIST heads:heads parameters:parameters success:^(id responseObject)
+         {
+             NSArray *arry = responseObject[@"value"];
+             if (arry.count == 0) {
+                 kAlter(@"无结果");
+             }else{
+                 NSMutableArray *arryNew = [NSMutableArray array];
+                 for (NSDictionary *dicNew in responseObject[@"value"]) {
+                     if ([dicNew objectForKey:@"userName"]!=nil) {
+                         [arryNew addObject:dicNew];
+                     }
+                 }
+                 _arryData = arryNew;
+             }
+             [_tableView reloadData];
+             _HUD.hidden = YES;
+         } failure:^(NSError *error) {
+             _HUD.hidden = YES;
+             kAlter(kFail);
+         }];
+    }
+}
+
+
+-(NSMutableArray *)judgeRepeat:(NSArray *)arry{
+    
+    NSMutableArray *arryD = [NSMutableArray arrayWithArray:arry];
+    NSMutableArray *arryNew = [NSMutableArray array];
+    
+    for (NSDictionary *dicData in arryD) {
+        NSString *strData = [dicData objectForKey:@"loginId"];
+        for (NSDictionary *dicS in _arryS) {
+            NSString *strS = [dicS objectForKey:@"memberId"];
+            NSString *strD = [dicS objectForKey:@"loginId"];
+            if ([strS isEqualToString:strData] || [strData isEqualToString:strD]) {
+                [arryNew addObject:dicData];
+            }
+        }
+    }
+    
+    
+    for (NSDictionary *dicNew in arryNew) {
+        if ([arryD containsObject:dicNew]) {
+            [arryD removeObject:dicNew];
+        }
+    }
+    
+    return arryD;
+    
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

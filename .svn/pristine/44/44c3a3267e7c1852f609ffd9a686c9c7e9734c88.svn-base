@@ -1,0 +1,490 @@
+//
+//  PublishFreeViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/5/23.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "PublishFreeViewController.h"
+#import "PublishFreeTableViewCell.h"
+#import "SettingViewController.h"
+#import "VideoTableViewController.h"
+#import "HillFreeModel.h"
+#import "GeneralViewController.h"
+#import "BasePickerView.h"
+#import "OnLineViewController.h"
+@interface PublishFreeViewController ()<UITableViewDelegate,UITableViewDataSource,BaseDatePickerDelegate,BasePickerViewDelegate>
+{
+    UITableView *_tableView;
+    NSInteger _selectedBtn;
+    UIButton *_publishBtn;
+    UIButton *_btnAdd;
+    
+    BaseDatePickerViewController *_basePicker;
+    BasePickerView *_basePickerView;
+    
+    NSInteger _selectedRow;
+    NSMutableArray *_arryPickView;
+
+    NSMutableArray *_arryDataSource;
+}
+@end
+
+@implementation PublishFreeViewController
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    
+    if ([self.from isEqualToString:@"EditingPublish"]) {
+        NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+        NSArray *arry = [self.hillModel.openDate componentsSeparatedByString:@" "];
+        [dic setObject:arry[0] forKey:@"openDate"];
+        [dic setObject:[NSString stringWithFormat:@"%ld",self.hillModel.amount] forKey:@"amount"];
+        [_arryDataSource addObject:dic];
+        [_tableView reloadData];
+    }else
+    {
+        [_arryDataSource removeAllObjects];
+        if (_selectedBtn == 777) {
+            if ([self isOpenSever:@"VasSet0"] == NO) {
+                [_arryDataSource addObject:@"温馨提示：您当前尚未开通电话服务！"];
+            }
+        }else if(_selectedBtn == 778){
+            if ([self isOpenSever:@"VasSet1"] == NO) {
+                [_arryDataSource addObject:@"温馨提示：您当前尚未开通电话服务！"];
+            }
+        }
+        [_tableView reloadData];
+    }
+    
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+     self.title = @"义诊发布";
+    self.view.backgroundColor = [UIColor whiteColor];
+    _arryDataSource = [[NSMutableArray alloc]init];
+
+    _arryPickView = [NSMutableArray array];
+    for (NSInteger i = 0; i< 40; i++) {
+        [_arryPickView addObject:[NSString stringWithFormat:@"%ld",i+1]];
+    }
+    
+    self.automaticallyAdjustsScrollViewInsets = NO;
+    [self creatHeader];
+    
+    _tableView = [[UITableView alloc]initWithFrame:CGRectMake(0, 65+ 100+2, kWith, kHeight-65-100-2) style:UITableViewStyleGrouped];
+    _tableView.dataSource = self;
+    _tableView.delegate = self;
+    _tableView.rowHeight = 100;
+    [self.view addSubview:_tableView];
+
+    _basePicker = [[BaseDatePickerViewController alloc]initWithModel:1];
+    _basePicker.delegate = self;
+    [self.view addSubview:_basePicker];
+    
+    _basePickerView  = [[BasePickerView alloc]init];
+    _basePickerView.delegate = self;
+    [self.view addSubview:_basePickerView];
+    
+    [_tableView registerClass:[PublishFreeTableViewCell class] forCellReuseIdentifier:@"publishFree"];
+    [_tableView registerClass:[UITableViewCell class] forCellReuseIdentifier:@"nsstring"];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onNotifyPublishDelete:) name:@"PublishDelete" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onNotifyPublishAdd:) name:@"PublishAdd" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onNotifyPublisCount:) name:@"PublishReduce" object:nil];
+    
+}
+
+-(void)creatHeader{
+    UIView *viewHeader = [[UIView alloc]initWithFrame:CGRectMake(0, 60, kWith, 110)];
+    
+    UILabel *lblType = [[UILabel alloc]initWithFrame:CGRectMake(10, 5, 60, 35)];
+    lblType.textAlignment =1;
+    lblType.text= @"义诊类型";
+    lblType.font = [UIFont systemFontOfSize:13];
+    [viewHeader addSubview:lblType];
+    
+    NSArray *arry = [NSArray arrayWithObjects:@"图文咨询",@"电话咨询",@"视频咨询", nil];
+    float width = (kWith - 80 -30)/2;
+    for (NSInteger i = 0; i<3; i++) {
+        UIButton *btn =  [UIButton buttonWithType:UIButtonTypeCustom];
+        btn.frame = CGRectMake(90+(width +10)*(i%2), 10+(40 + 10)*(i/2), width, 35);
+        btn.backgroundColor = [UIColor whiteColor];
+        [btn setTitle:arry[i] forState:UIControlStateNormal];
+        [btn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+        [btn setTitleColor:[UIColor whiteColor] forState:UIControlStateSelected];
+        btn.layer.cornerRadius = 5;
+        btn.layer.masksToBounds = YES;
+        btn.layer.borderWidth = 1;
+        btn.layer.borderColor = [kBoradColor CGColor];
+        btn.tag = i + 777;
+        [btn addTarget:self action:@selector(onBtnClickPublish:) forControlEvents:UIControlEventTouchUpInside];
+        [viewHeader addSubview:btn];
+        
+        if ([self.from isEqualToString:@"EditingPublish"]) {
+            _selectedBtn = 777 + self.hillModel.type-1;
+            if (i == self.hillModel.type - 1) {
+                btn.selected = YES;
+                btn.backgroundColor = BLUECOLOR_STYLE;
+            }
+        }else
+        {
+            if (i == 0) {
+                if ([self isOpenSever:@"VasSet0"] == NO) {
+                    [_arryDataSource addObject:@"温馨提示：您当前尚未开通图文服务！"];
+                }
+                [_tableView reloadData];
+                btn.backgroundColor = BLUECOLOR_STYLE;
+                btn.selected = YES;
+                _selectedBtn = 777;
+            }
+        }
+    }
+    [self.view addSubview:viewHeader];
+}
+
+-(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return 1;
+}
+
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return _arryDataSource.count;
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 0.01;
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    return 110;
+}
+
+-(UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section{
+    UIView *viewFooter = [[UIView alloc]initWithFrame:CGRectMake(0, 0, kWith, 110)];
+    
+    _btnAdd= [UIButton buttonWithType:UIButtonTypeCustom];
+    _btnAdd.frame = CGRectMake(40, 10, kWith-80, 35);
+    _btnAdd.backgroundColor = [UIColor whiteColor];
+    _btnAdd.layer.borderWidth = 1;
+    _btnAdd.layer.borderColor = [BLUECOLOR_STYLE CGColor];
+    [_btnAdd addTarget:self action:@selector(onBtnClickPublishAdd:) forControlEvents:UIControlEventTouchUpInside];
+    _btnAdd.titleLabel.font = [UIFont systemFontOfSize:20];
+    [_btnAdd setTitle:@"+  添加时间段" forState:UIControlStateNormal];
+    [_btnAdd setTitleColor:BLUECOLOR_STYLE forState:UIControlStateNormal];
+    [viewFooter addSubview:_btnAdd];
+    
+    _publishBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    _publishBtn.backgroundColor = BLUECOLOR_STYLE;
+    _publishBtn.layer.cornerRadius = 5;
+    _publishBtn.layer.masksToBounds = YES;
+
+    [_publishBtn addTarget:self action:@selector(onPublish:) forControlEvents:UIControlEventTouchUpInside];
+    
+    if ([self.from isEqualToString:@"EditingPublish"]) {
+        _btnAdd.hidden = YES;
+        _publishBtn.frame = _btnAdd.frame;
+        [_publishBtn setTitle:@"发布" forState:UIControlStateNormal];
+    }else{
+        if (_selectedBtn == 779) {
+            [_publishBtn setTitle:@"去设置" forState:UIControlStateNormal];
+            _btnAdd.hidden = YES;
+            _publishBtn.frame = _btnAdd.frame;
+        }
+        else if(_selectedBtn == 778)
+        {
+            [self isOPenSeverOnline:@"VasSet1"];
+        }else
+        {
+            [self isOPenSeverOnline:@"VasSet0"];
+
+        }
+    }
+    [viewFooter addSubview:_publishBtn];
+    return viewFooter;
+}
+
+-(void)isOPenSeverOnline:(NSString *)type{
+    if ([self isOpenSever:type] == NO) {
+        _btnAdd.hidden = YES;
+        [_publishBtn setTitle:@"去设置" forState:UIControlStateNormal];
+        _publishBtn.frame = _btnAdd.frame;
+    }else
+    {
+        _btnAdd.hidden = NO;
+        [_publishBtn setTitle:@"发布" forState:UIControlStateNormal];
+        _publishBtn.frame = CGRectMake(20, 65, kWith-40, 35);
+    }
+}
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+
+    if ([_arryDataSource[indexPath.row] isKindOfClass:[NSDictionary class]]) {
+        PublishFreeTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"publishFree" forIndexPath:indexPath];
+        cell.lblTitle.text = [NSString stringWithFormat:@"日期%ld",indexPath.row + 1];
+        NSDictionary *dic = _arryDataSource[indexPath.row];
+        cell.lblDatePicker.text = [dic objectForKey:@"openDate"];
+        cell.lblCountPicker.text = [dic objectForKey:@"amount"];
+        if ([self.from isEqualToString:@"EditingPublish"]) {
+            cell.btnDelete.hidden = YES;
+        }else
+        {
+            cell.btnDelete.hidden = NO;
+        }
+        return cell;
+    }else if ([_arryDataSource[indexPath.row] isKindOfClass:[NSString  class]]){
+    
+        UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"nsstring" forIndexPath:indexPath];
+        cell.textLabel.text = _arryDataSource[indexPath.row];
+        cell.textLabel.numberOfLines = 0;
+        return cell;
+    }
+    return 0;
+}
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+}
+
+#pragma mark----选择类型
+-(void)onBtnClickPublish:(UIButton *)btn{
+    
+    if ([self.from isEqualToString:@"EditingPublish"]) {
+        return;
+    }else
+    {
+        UIButton *btnSelected = [self.view viewWithTag:_selectedBtn];
+        btnSelected.backgroundColor = [UIColor whiteColor];
+        btnSelected.selected = NO;
+        btn.selected = YES;
+        btn.backgroundColor = BLUECOLOR_STYLE;
+        _selectedBtn = btn.tag;
+        
+        if (_selectedBtn == 779) {
+            [_arryDataSource removeAllObjects];
+            [_arryDataSource addObject:@"温馨提示：视频义诊请直接在开启视频问诊时设置。"];
+            [_tableView reloadData];
+        }
+        else if(_selectedBtn == 777)
+        {
+            [_arryDataSource removeAllObjects];
+            if ([self isOpenSever:@"VasSet0"] == NO) {
+                [_arryDataSource addObject:@"温馨提示：您当前尚未开通图文服务！"];
+            }
+            [_tableView reloadData];
+        }
+        else{
+            [_arryDataSource removeAllObjects];
+            if ([self isOpenSever:@"VasSet1"] == NO) {
+                [_arryDataSource addObject:@"温馨提示：您当前尚未开通电话服务！"];
+            }
+            [_tableView reloadData];
+        }
+    }
+}
+
+-(void)onBtnClickPublishAdd:(UIButton *)brn{
+
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    [dic setObject:@"请选择" forKey:@"openDate"];
+    [dic setObject:@"1" forKey:@"amount"];
+    [_arryDataSource addObject:dic];
+    [_tableView reloadData];
+}
+
+#pragma mark----发布
+-(void)onPublish:(UIButton *)sender{
+    
+    if (_selectedBtn != 777+2) {
+        
+        if ([sender.titleLabel.text isEqualToString:@"去设置"]) {
+            OnLineViewController *online = [[OnLineViewController alloc]init];
+            online.from = @"freePatient";
+            [self.navigationController pushViewController:online animated:YES];
+            return;
+        }
+        
+        if (_arryDataSource.count == 0) {
+            kAlter(@"未设置日期！");
+            return;
+        }
+        NSDateFormatter *fot = [[NSDateFormatter alloc]init];
+        [fot setDateFormat:@"yyyy-MM-dd"];
+        NSString *nowDate = [fot stringFromDate:[NSDate date]];
+        NSDate *newDate = [fot dateFromString:nowDate];
+        long long newUnit = [newDate timeIntervalSince1970];
+        long long twoWeek = newUnit + 14 *24 * 60 *60;
+        for (NSDictionary *dic in _arryDataSource) {
+            NSDate *date = [fot dateFromString:[dic objectForKey:@"openDate"]];
+            long long DateUnit = [date timeIntervalSince1970];
+            if (DateUnit >= twoWeek) {
+                kAlter(@"不能设置超过两周的时间！");
+                return;
+            }
+        }
+        
+        NSInteger type = _selectedBtn -777+1;
+        NSMutableArray *arryWeb = [NSMutableArray array];
+        for (NSInteger i = 0; i < _arryDataSource.count; i++) {
+            NSMutableDictionary *dicWeb = [NSMutableDictionary dictionaryWithDictionary:_arryDataSource[i]];
+            [dicWeb setObject:@(type) forKey:@"type"];
+            [arryWeb addObject:dicWeb];
+        }
+        
+        NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+        [dic setObject:[kUserDefatuel objectForKey:@"id"] forKey:@"doctorId"];
+        NSData *data = [NSJSONSerialization dataWithJSONObject:arryWeb options:NSJSONWritingPrettyPrinted error:nil];
+        NSString *str = [[NSString alloc]initWithData:data encoding:NSUTF8StringEncoding];
+        [dic setObject:str forKey:@"clinicList"];
+        MBProgressHUD *_HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+        _HUD.mode = MBProgressHUDModeIndeterminate;
+        _HUD.labelText = @"正在加载";
+        _HUD.hidden = NO;
+
+        [RequestManager publishFreeHill:[NSString stringWithFormat:@"%@/api/Share/FreeClinicAdd",NET_URLSTRING] Parameters:dic Complation:^(NSNumber *code) {
+            _HUD.hidden = YES;
+            if ([code integerValue] == 10000) {
+                UIAlertController *alter = [UIAlertController alertControllerWithTitle:@"提示" message:@"发布成功"preferredStyle:UIAlertControllerStyleAlert];
+                [alter addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+                    [self.navigationController popViewControllerAnimated:YES];
+                }]];
+                [self presentViewController:alter animated:YES completion:nil];
+                return;
+            }else
+            {
+                _HUD.hidden = YES;
+                kAlter(@"发布失败");
+            }
+        } Fail:^(NSError *error) {
+            _HUD.hidden = YES;
+            kAlter(@"发布失败");
+        }];
+        
+    }
+    else
+    {
+        NSDictionary *dic = [kUserDefatuel objectForKey:@"VasSet2"];
+        if ([[dic objectForKey:@"isOpen"] isEqualToString:@"True"]) {
+            //已经开通
+            //创建视频咨询
+            [self openViedo];
+        }
+        else
+        {
+            GeneralViewController *gener = [[GeneralViewController alloc]init];
+            gener.from = @"viedo";
+            [self.navigationController pushViewController:gener animated:YES];
+            
+        }
+        
+    }
+}
+
+-(void)openViedo{
+    NSMutableDictionary *dicP = [NSMutableDictionary dictionary];
+    [dicP setObject:[kUserDefatuel objectForKey:@"id"] forKey:@"doctorId"];
+    MBProgressHUD *_HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    _HUD.mode = MBProgressHUDModeIndeterminate;
+    _HUD.labelText = @"正在加载";
+    _HUD.hidden = NO;
+    [RequestManager startViedoChat:[NSString stringWithFormat:@"%@/api/Share/GetServiceRecord",NET_URLSTRING] Parameters:dicP Complation:^(NSString *xtrId, NSNumber *serviceAmount, NSNumber *isFree, NSNumber *code) {
+        _HUD.hidden = YES;
+        if (code != nil) {
+            //未开启
+            UIAlertController *alter = [UIAlertController alertControllerWithTitle:@"提示" message:@"是否确定现在开启视频咨询" preferredStyle:UIAlertControllerStyleAlert];
+            [alter addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+                SettingViewController *viw = [[SettingViewController alloc]init];
+                [self.navigationController pushViewController:viw animated:YES];
+            }]];
+            [alter addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleDefault handler:nil]];
+            [self presentViewController:alter animated:YES completion:nil];
+        }
+        else
+        {
+            kAlter(@"视频功能已开启，不能设置义诊!");
+            return ;
+        }
+
+    } Fail:^(NSError *error) {
+        _HUD.hidden =YES;
+        kAlter(kFail);
+    }];
+
+}
+
+#pragma mark----时间选择器
+-(void)setDateFromDatePicker:(NSDate *)date{
+    NSMutableDictionary *dic = _arryDataSource[_selectedRow - 1100];
+    NSDateFormatter *forttom = [[NSDateFormatter alloc]init];
+    [forttom setDateFormat:@"yyyy-MM-dd"];
+    [dic setObject:[forttom stringFromDate:date] forKey:@"openDate"];
+    [_tableView reloadData];
+}
+-(void)onNotifyPublishAdd:(NSNotification *)notify{
+    PublishFreeTableViewCell *cell = notify.object;
+    NSIndexPath *index = [_tableView indexPathForCell:cell];
+    _selectedRow = index.row +1100;
+    [_basePicker datePickerShow:nil MinDate:nil];
+}
+
+
+#pragma mark----数量选择器
+-(void)onNotifyPublisCount:(NSNotification *)notify{
+    PublishFreeTableViewCell *cell = notify.object;
+    NSIndexPath *index = [_tableView indexPathForCell:cell];
+    _selectedRow = index.row + 1100;
+    NSMutableArray *arry = [NSMutableArray array];
+    [arry addObject:_arryPickView];
+    [_basePickerView pickerDelegateShow:arry];
+}
+
+#pragma mark------展示数据
+
+-(void)setPicker:(NSString *)count{
+    NSMutableDictionary *dic = _arryDataSource[_selectedRow - 1100];
+    [dic setValue:count forKey:@"amount"];
+    [_tableView reloadData];
+}
+
+-(void)onNotifyPublishDelete:(NSNotification *)notify{
+    
+    PublishFreeTableViewCell *cell = notify.object;
+    NSIndexPath *index = [_tableView indexPathForCell:cell];
+    
+    UIAlertController *alter = [UIAlertController alertControllerWithTitle:@"提示" message:[NSString stringWithFormat:@"您确定要删除第%ld行",index.row +1] preferredStyle:UIAlertControllerStyleAlert];
+    [alter addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+    [alter addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [_arryDataSource removeObjectAtIndex:index.row];
+        [_tableView deleteRowsAtIndexPaths:@[index] withRowAnimation:UITableViewRowAnimationFade];
+    }]];
+    [self presentViewController:alter animated:YES completion:nil];
+}
+
+//判断是否开通相应的服务
+-(BOOL)isOpenSever:(NSString *)type{
+
+    NSDictionary *dic = [kUserDefatuel objectForKey:type];
+    if ([[dic objectForKey:@"isOpen"] isEqualToString:@"True"]) {
+        return YES;
+    }
+    return NO;
+}
+
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

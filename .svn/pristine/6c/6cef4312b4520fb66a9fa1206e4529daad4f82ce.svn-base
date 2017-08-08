@@ -1,0 +1,126 @@
+//
+//  SearchGroupViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/6/22.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "SearchGroupViewController.h"
+#import "GroupDetailModel.h"
+#import "GruopDetailTableViewCell.h"
+#import "PersonCenterClipViewController.h"
+
+@interface SearchGroupViewController ()
+<UITableViewDelegate,UITableViewDataSource>
+{
+    UITextField *_text;
+    NSMutableArray *_arryData;
+    
+    UITableView *_tableViewSear;
+}
+@end
+
+@implementation SearchGroupViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.tabBarController.tabBar.hidden = YES;
+    
+    self.automaticallyAdjustsScrollViewInsets = NO;
+    self.title = @"病历夹";
+    self.view.backgroundColor = kBackgroundColor;
+    
+    _text= [[UITextField alloc]initWithFrame:CGRectMake(10, 64+10, kWith-20-70, 30)];
+    _text.placeholder = @"请根据患者姓名进行搜索";
+    _text.borderStyle = UITextBorderStyleRoundedRect;
+    _text.textAlignment = 1;
+    _text.clearButtonMode = UITextFieldViewModeAlways;
+    [self.view addSubview:_text];
+    
+    UIButton  *btnSearch = [UIButton buttonWithType:UIButtonTypeCustom];
+    btnSearch.frame = CGRectMake(kWith - 60, 64+10, 50, 30);
+    [btnSearch setTitle:@"搜索" forState:UIControlStateNormal];
+    btnSearch.backgroundColor = BLUECOLOR_STYLE;
+    btnSearch.layer.cornerRadius = 3;
+    [btnSearch addTarget:self action:@selector(onBtnSearchGroup) forControlEvents:UIControlEventTouchUpInside];
+    btnSearch.layer.masksToBounds = YES;
+    [self.view addSubview:btnSearch];
+    
+    _tableViewSear = [[UITableView alloc]initWithFrame:CGRectMake(0, 114, kWith, kHeight - 114)];
+    _tableViewSear.dataSource = self;
+    _tableViewSear.backgroundColor = [UIColor clearColor];
+    _tableViewSear.delegate = self;
+    _tableViewSear.rowHeight = 60;
+    _tableViewSear.separatorStyle = UITableViewCellSeparatorStyleNone;
+    [self.view addSubview:_tableViewSear];
+
+    [_tableViewSear registerClass:[GruopDetailTableViewCell class] forCellReuseIdentifier:@"searchGroup"];
+}
+
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return _arryData.count;
+}
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    GruopDetailTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"searchGroup" forIndexPath:indexPath];
+    
+    GroupDetailModel *detailModel = _arryData[indexPath.row];
+    cell.lblName.text = detailModel.name;
+    [cell.imageAvater sd_setImageWithURL:[NSURL URLWithString:[NSString stringWithFormat:@"%@",NET_URLSTRING]] placeholderImage:[UIImage imageNamed:@"人物"]];
+    return cell;
+}
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    GroupDetailModel *detailModel = _arryData[indexPath.row];
+    PersonCenterClipViewController *per = [[PersonCenterClipViewController alloc]init];
+    per.group = detailModel;
+    [self.navigationController pushViewController:per animated:YES];
+}
+
+-(void)onBtnSearchGroup{
+    [_arryData removeAllObjects];
+    [_tableViewSear reloadData];
+
+    
+    NSDictionary *dic = @{@"patientName":_text.text};
+    [RequestManager getWithURLStringALL:[NSString stringWithFormat:@"%@/api/Doctor/GetPatientByDoc",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:dic viewConroller:self success:^(id responseObject) {
+
+        NSMutableArray *arryData = [NSMutableArray array];
+        for (NSDictionary *dicValue in (NSArray *)responseObject) {
+            GroupDetailModel *groupD = [[GroupDetailModel alloc]init];
+            for (NSString *key in [dicValue allKeys]) {
+                [groupD setValue:[dicValue objectForKey:key] forKey:key];
+            }
+            [arryData addObject:groupD];
+        }
+
+        if (arryData.count == 0) {
+            kAlter(@"无结果");
+        }else
+        {
+            _arryData = arryData;
+            [_tableViewSear reloadData];
+        }
+    } failure:^(NSError *error) {
+
+    }];
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

@@ -1,0 +1,117 @@
+//
+//  DocAssistantViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/6/20.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "DocAssistantViewController.h"
+
+@interface DocAssistantViewController ()<UITableViewDelegate,UITableViewDataSource>
+{
+    UITableView *_tableDocAssis;
+}
+@end
+
+@implementation DocAssistantViewController
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    
+    self.navigationController.navigationBar.hidden = NO;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+
+    self.automaticallyAdjustsScrollViewInsets = NO;
+    self.view.backgroundColor = kBackgroundColor;
+    self.title = @"医生助理";
+
+    _tableDocAssis = [[UITableView alloc]initWithFrame:CGRectMake(0, 64, kWith, 100) style:UITableViewStyleGrouped];
+    _tableDocAssis.rowHeight = 50;
+    _tableDocAssis.dataSource = self;
+    _tableDocAssis.delegate = self;
+    _tableDocAssis.scrollEnabled = NO;
+    [self.view addSubview:_tableDocAssis];
+}
+
+-(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return 1;
+}
+
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return 1;
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 50;
+}
+
+-(UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+
+    UIView *viewB = [[UIView alloc]initWithFrame:CGRectMake(0, 0, kWith, 50)];
+    viewB.backgroundColor = [UIColor whiteColor];
+    
+    UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+    btn.frame = CGRectMake(kWith/2, 0, kWith/2, 50);
+    [btn setTitle:@"0592-2109261" forState:UIControlStateNormal];
+    [btn setTitleColor:BLUECOLOR_STYLE forState:UIControlStateNormal];
+    [btn addTarget:self action:@selector(onBtnDocAssis:) forControlEvents:UIControlEventTouchUpInside];
+    [viewB addSubview:btn];
+    
+    UILabel*lbl = [[UILabel alloc]initWithFrame:CGRectMake(20, 0, kWith/2-20, 50)];
+    lbl.font = [UIFont systemFontOfSize:15];
+    lbl.text = @"医助热线";
+    [viewB addSubview:lbl];
+    
+    return viewB;
+}
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+
+    static NSString *user    = @"DocAssistan";
+    UITableViewCell *cell    = [tableView dequeueReusableCellWithIdentifier:user];
+    if (cell == nil) {
+    cell                     = [[UITableViewCell alloc]initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:user];
+    }
+    cell.selectionStyle      = UITableViewCellSelectionStyleNone;
+    cell.textLabel.text      = @"请求医助回电";
+    cell.textLabel.textColor = BLUECOLOR_STYLE;
+    cell.textLabel.font      = [UIFont systemFontOfSize:15];
+    
+    return cell;
+}
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+
+    
+}
+
+-(void)onBtnDocAssis:(UIButton *)btn{
+
+    NSString *allString = [NSString stringWithFormat:@"tel:%@",btn.titleLabel.text];
+    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:allString]];
+
+}
+
+
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

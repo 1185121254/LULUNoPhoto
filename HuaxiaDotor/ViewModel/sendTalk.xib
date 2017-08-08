@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="10117" systemVersion="15E65" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES">
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="10085"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <view contentMode="scaleToFill" id="gW1-9N-APK" customClass="sendTalk">
+            <rect key="frame" x="0.0" y="0.0" width="320" height="64"/>
+            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+            <subviews>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="CHU-uz-EGV">
+                    <rect key="frame" x="0.0" y="5" width="320" height="54"/>
+                    <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                </button>
+                <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="l+" translatesAutoresizingMaskIntoConstraints="NO" id="3M2-ex-SLE">
+                    <rect key="frame" x="15" y="12" width="40" height="40"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="40" id="4eW-rp-3fL"/>
+                        <constraint firstAttribute="width" constant="40" id="Inu-BZ-jLI"/>
+                    </constraints>
+                </imageView>
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="da6-Hg-alx">
+                    <rect key="frame" x="74" y="21" width="79" height="21"/>
+                    <constraints>
+                        <constraint firstAttribute="width" constant="79" id="kV9-1t-r2u"/>
+                        <constraint firstAttribute="height" constant="21" id="uKY-iJ-jBb"/>
+                    </constraints>
+                    <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                    <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="0.5" colorSpace="calibratedRGB"/>
+                    <nil key="highlightedColor"/>
+                </label>
+            </subviews>
+            <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+            <constraints>
+                <constraint firstAttribute="trailing" secondItem="CHU-uz-EGV" secondAttribute="trailing" id="2SO-SA-cmP"/>
+                <constraint firstItem="CHU-uz-EGV" firstAttribute="leading" secondItem="gW1-9N-APK" secondAttribute="leading" id="2r1-1m-IdH"/>
+                <constraint firstItem="3M2-ex-SLE" firstAttribute="centerY" secondItem="CHU-uz-EGV" secondAttribute="centerY" id="BDq-5f-cPs"/>
+                <constraint firstItem="CHU-uz-EGV" firstAttribute="top" secondItem="gW1-9N-APK" secondAttribute="top" constant="5" id="HLn-Wt-QVk"/>
+                <constraint firstAttribute="bottom" secondItem="CHU-uz-EGV" secondAttribute="bottom" constant="5" id="M9h-vD-g0e"/>
+                <constraint firstItem="da6-Hg-alx" firstAttribute="centerY" secondItem="3M2-ex-SLE" secondAttribute="centerY" id="O4H-vv-EU1"/>
+                <constraint firstItem="da6-Hg-alx" firstAttribute="leading" secondItem="3M2-ex-SLE" secondAttribute="trailing" constant="19" id="VhX-dC-v8c"/>
+                <constraint firstItem="3M2-ex-SLE" firstAttribute="leading" secondItem="gW1-9N-APK" secondAttribute="leading" constant="15" id="oyc-2C-nID"/>
+            </constraints>
+            <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
+            <connections>
+                <outlet property="sendViewButton" destination="CHU-uz-EGV" id="nCU-zF-q0w"/>
+                <outlet property="txtLabel" destination="da6-Hg-alx" id="KZ3-tp-zHK"/>
+            </connections>
+            <point key="canvasLocation" x="371" y="328"/>
+        </view>
+    </objects>
+    <resources>
+        <image name="l+" width="29" height="29"/>
+    </resources>
+</document>

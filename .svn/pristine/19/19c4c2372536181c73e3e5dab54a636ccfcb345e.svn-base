@@ -1,0 +1,99 @@
+//
+//  WebDetailViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/6/21.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "WebDetailViewController.h"
+
+@interface WebDetailViewController ()
+
+@end
+
+@implementation WebDetailViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+
+    self.title = @"详情";
+    self.automaticallyAdjustsScrollViewInsets = NO;
+    UIWebView *web = [[UIWebView alloc]initWithFrame:CGRectMake(0, 64, kWith, kHeight - 64)];
+    web.backgroundColor = [UIColor whiteColor];
+    [self.view addSubview:web];
+
+    UIButton *btnStore = [UIButton buttonWithType:UIButtonTypeCustom];
+    btnStore.frame = CGRectMake(0, 0, 20, 20);
+    [btnStore setBackgroundImage:[UIImage imageNamed:@"1"] forState:UIControlStateNormal];
+    [btnStore setBackgroundImage:[UIImage imageNamed:@"2"] forState:UIControlStateSelected];
+    [btnStore addTarget:self action:@selector(onStore:) forControlEvents:UIControlEventTouchUpInside];
+    btnStore.selected = YES;
+    UIBarButtonItem *itemstore = [[UIBarButtonItem alloc]initWithCustomView:btnStore];
+
+    
+    UIButton *btnShare = [UIButton buttonWithType:UIButtonTypeCustom];
+    btnShare.frame = CGRectMake(35, 0, 20, 20);
+    [btnShare setBackgroundImage:[UIImage imageNamed:@"t-share-1"] forState:UIControlStateNormal];
+    UIBarButtonItem *itemshare = [[UIBarButtonItem alloc]initWithCustomView:btnShare];
+    self.navigationItem.rightBarButtonItems = @[itemshare,itemstore];
+    
+    
+    [web loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:[self.dicData objectForKey:@"webUrl"]]]];
+    
+}
+
+-(void)onStore:(UIButton *)btn{
+
+    MBProgressHUD *_HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    _HUD.mode = MBProgressHUDModeIndeterminate;
+    _HUD.labelText = @"正在加载";
+    _HUD.hidden = NO;
+    if (btn.selected == YES) {
+        NSDictionary *dic = @{@"id":[self.dicData objectForKey:@"id"]};
+        [RequestManager CloseOnLine:[NSString stringWithFormat:@"%@/api/Share/CollectionRemove",NET_URLSTRING] Parameters:dic Complation:^(NSNumber *code) {
+            _HUD.hidden = YES;
+            if ([code integerValue]==10000) {
+                btn.selected = NO;
+            }else{
+                kAlter(@"操作失败");
+            }
+
+        } Fail:^(NSError *error) {
+            _HUD.hidden = YES;
+        }];
+    }
+    else
+    {
+        NSDictionary *dic = @{@"sourceID":[self.dicData objectForKey:@"sourceID"],@"collector":[self.dicData objectForKey:@"collector"],@"sourceType":@"1",@"title":[self.dicData objectForKey:@"title"],@"picUrl":@"",@"webUrl":[self.dicData objectForKey:@"webUrl"]};
+        [RequestManager publishFreeHill:[NSString stringWithFormat:@"%@/api/Share/CollectionAdd",NET_URLSTRING] Parameters:dic Complation:^(NSNumber *code) {
+            _HUD.hidden = YES;
+            if ([code integerValue] == 10000) {
+                btn.selected = YES;
+            }else{
+                kAlter(@"操作失败");
+            }
+        } Fail:^(NSError *error) {
+            _HUD.hidden = YES;
+            kAlter(@"操作失败");
+        }];
+    }
+}
+
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

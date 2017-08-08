@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="10117" systemVersion="15E65" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES">
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="10085"/>
+        <capability name="Constraints to layout margins" minToolsVersion="6.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" restorationIdentifier="ToolEye" selectionStyle="default" indentationWidth="10" reuseIdentifier="ToolEye" rowHeight="92" id="r28-lf-24O" customClass="EyeReviewTableViewCell">
+            <rect key="frame" x="0.0" y="0.0" width="320" height="90"/>
+            <autoresizingMask key="autoresizingMask"/>
+            <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="r28-lf-24O" id="awS-hf-q6t">
+                <rect key="frame" x="0.0" y="0.0" width="320" height="89"/>
+                <autoresizingMask key="autoresizingMask"/>
+                <subviews>
+                    <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="gkP-Pf-hBT">
+                        <rect key="frame" x="15" y="15" width="60" height="60"/>
+                        <constraints>
+                            <constraint firstAttribute="height" constant="60" id="46d-lZ-pa0"/>
+                            <constraint firstAttribute="width" constant="60" id="WMo-A1-5A6"/>
+                        </constraints>
+                    </imageView>
+                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="xxxxxxxxxxxxxxxxxxxxxxxxxxxxx" textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="2" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="BTI-cT-JTm">
+                        <rect key="frame" x="88" y="38" width="207" height="43"/>
+                        <fontDescription key="fontDescription" type="system" pointSize="12"/>
+                        <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="0.3982219827586207" colorSpace="calibratedRGB"/>
+                        <nil key="highlightedColor"/>
+                    </label>
+                    <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="disclosure-arrow-0" translatesAutoresizingMaskIntoConstraints="NO" id="qjy-qI-jFb">
+                        <rect key="frame" x="305" y="35" width="9" height="19"/>
+                        <constraints>
+                            <constraint firstAttribute="height" constant="19" id="Nyq-Qv-HJr"/>
+                            <constraint firstAttribute="width" constant="9" id="vxM-5f-kOh"/>
+                        </constraints>
+                    </imageView>
+                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="XXXXXXXX" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="glF-i6-1BP">
+                        <rect key="frame" x="88" y="15" width="98" height="21"/>
+                        <constraints>
+                            <constraint firstAttribute="height" constant="21" id="V1K-ES-DWH"/>
+                        </constraints>
+                        <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                        <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="0.80024245689655171" colorSpace="calibratedRGB"/>
+                        <nil key="highlightedColor"/>
+                    </label>
+                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="kG5-Yk-cRz">
+                        <rect key="frame" x="20" y="88" width="300" height="1"/>
+                        <color key="backgroundColor" red="0.80392156859999997" green="0.81960784310000001" blue="0.85098039219999999" alpha="1" colorSpace="calibratedRGB"/>
+                        <constraints>
+                            <constraint firstAttribute="height" constant="1" id="ciw-CL-ic1"/>
+                        </constraints>
+                        <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                        <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
+                        <nil key="highlightedColor"/>
+                    </label>
+                </subviews>
+                <constraints>
+                    <constraint firstItem="kG5-Yk-cRz" firstAttribute="leading" secondItem="awS-hf-q6t" secondAttribute="leading" constant="20" id="2DH-lF-sjf"/>
+                    <constraint firstItem="glF-i6-1BP" firstAttribute="top" secondItem="awS-hf-q6t" secondAttribute="topMargin" constant="7" id="6wN-M2-4IF"/>
+                    <constraint firstAttribute="bottom" secondItem="kG5-Yk-cRz" secondAttribute="bottom" id="HHb-xp-UcV"/>
+                    <constraint firstAttribute="trailing" secondItem="kG5-Yk-cRz" secondAttribute="trailing" id="LjF-uO-wDq"/>
+                    <constraint firstItem="gkP-Pf-hBT" firstAttribute="leading" secondItem="awS-hf-q6t" secondAttribute="leadingMargin" constant="7" id="TCc-b0-dvc"/>
+                    <constraint firstItem="qjy-qI-jFb" firstAttribute="leading" secondItem="BTI-cT-JTm" secondAttribute="trailing" constant="10" id="Xvk-YU-A2D"/>
+                    <constraint firstAttribute="trailing" secondItem="qjy-qI-jFb" secondAttribute="trailing" constant="6" id="a8b-C4-Cwv"/>
+                    <constraint firstAttribute="trailingMargin" secondItem="glF-i6-1BP" secondAttribute="trailing" constant="126" id="ea7-Dh-xds"/>
+                    <constraint firstAttribute="bottom" secondItem="BTI-cT-JTm" secondAttribute="bottom" constant="8" id="m12-3Y-hab"/>
+                    <constraint firstItem="gkP-Pf-hBT" firstAttribute="top" secondItem="awS-hf-q6t" secondAttribute="topMargin" constant="7" id="m5x-ca-FOP"/>
+                    <constraint firstItem="BTI-cT-JTm" firstAttribute="top" secondItem="glF-i6-1BP" secondAttribute="bottom" constant="2" id="nWE-v4-Uiy"/>
+                    <constraint firstItem="BTI-cT-JTm" firstAttribute="leading" secondItem="gkP-Pf-hBT" secondAttribute="trailing" constant="13" id="oUI-tl-s6X"/>
+                    <constraint firstItem="glF-i6-1BP" firstAttribute="leading" secondItem="gkP-Pf-hBT" secondAttribute="trailing" constant="13" id="omI-eQ-kAu"/>
+                    <constraint firstItem="qjy-qI-jFb" firstAttribute="centerY" secondItem="awS-hf-q6t" secondAttribute="centerY" id="pOT-A8-5UX"/>
+                </constraints>
+            </tableViewCellContentView>
+            <connections>
+                <outlet property="HeadImage" destination="gkP-Pf-hBT" id="IcD-CO-JsJ"/>
+                <outlet property="lblListInfo" destination="BTI-cT-JTm" id="k9U-HL-bS9"/>
+                <outlet property="lblListName" destination="glF-i6-1BP" id="nZA-yJ-sMX"/>
+            </connections>
+            <point key="canvasLocation" x="729" y="336"/>
+        </tableViewCell>
+    </objects>
+    <resources>
+        <image name="disclosure-arrow-0" width="8" height="13"/>
+    </resources>
+</document>

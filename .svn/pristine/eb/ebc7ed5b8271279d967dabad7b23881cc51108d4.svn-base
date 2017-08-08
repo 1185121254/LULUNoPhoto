@@ -1,0 +1,66 @@
+//
+//  PhotographyViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 17/3/13.
+//  Copyright © 2017年 kock. All rights reserved.
+//
+
+#import "PhotographyViewController.h"
+#import "PublishPhotoViewController.h"
+#import "PhotoPreviewViewController.h"
+@interface PhotographyViewController ()
+{
+    NSDictionary *photoDicData;
+}
+@end
+
+@implementation PhotographyViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+ 
+}
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    NSDictionary *para = @{@"doctorId":[kUserDefatuel objectForKey:@"id"]};
+    
+    [RequestManager getWithURLStringALL:[NSString stringWithFormat:@"%@/api/Circle/GetMyPhotographDetail",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:para viewConroller:self success:^(id responseObject) {
+        photoDicData = (NSDictionary *)responseObject;
+
+    } failure:^(NSError *error) {
+        
+    }];
+
+}
+
+
+- (IBAction)addPhotoGraphy:(id)sender {
+    if (photoDicData[@"id"] == nil) {
+        PublishPhotoViewController *pub = [[PublishPhotoViewController alloc]init];
+        [self.navigationController pushViewController:pub animated:YES];
+    }else{
+        PhotoPreviewViewController *pre = [[PhotoPreviewViewController alloc]init];
+        pre.dicData = photoDicData;
+        [self.navigationController pushViewController:pre animated:YES];
+    }
+    
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

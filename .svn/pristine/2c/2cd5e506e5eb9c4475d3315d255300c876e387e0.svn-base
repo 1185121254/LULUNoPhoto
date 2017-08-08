@@ -1,0 +1,74 @@
+//
+//  ChatViedoTableViewCell.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/5/17.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "ChatViedoTableViewCell.h"
+
+@implementation ChatViedoTableViewCell
+-(id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier{
+    if (self = [super initWithStyle:style reuseIdentifier:reuseIdentifier]) {
+        
+        _avater = [[UIImageView alloc]initWithFrame:CGRectMake(13, 10, 56, 56)];
+        _avater.layer.cornerRadius = 28;
+        _avater.layer.masksToBounds = YES;
+        [self.contentView addSubview:_avater];
+        
+        _btnCallNow = [UIButton buttonWithType:UIButtonTypeCustom];
+        _btnCallNow.titleLabel.font = [UIFont systemFontOfSize:14];
+        _btnCallNow.layer.cornerRadius = 5;
+        _btnCallNow.layer.masksToBounds = YES;
+        _btnCallNow.frame = CGRectMake(kWith-10-70, 10, 70, 30);
+        [_btnCallNow addTarget:self action:@selector(onBtnCall:) forControlEvents:UIControlEventTouchUpInside];
+        [self.contentView addSubview:_btnCallNow];
+        
+//        _btnOutTime = [UIButton buttonWithType:UIButtonTypeCustom];
+//        _btnOutTime.frame = CGRectMake(kWith-80-10-40, 10, 40, 30);
+//        _btnOutTime.titleLabel.font = [UIFont systemFontOfSize:13];
+//        [_btnOutTime setTitleColor:[UIColor redColor] forState:UIControlStateNormal];
+//        [_btnOutTime setTitle:@"未接通" forState:UIControlStateNormal];
+//        _btnOutTime.hidden = YES;
+//        [self.contentView addSubview:_btnOutTime];
+        
+        _lblName = [[UILabel alloc]initWithFrame:CGRectMake(79, 10, kWith-79-80, 20)];
+        _lblName.textColor = [UIColor colorWithRed:67/255.0 green:74/255.0 blue:84/255.0 alpha:1];
+        _lblName.font = [UIFont systemFontOfSize:15];
+        [self.contentView addSubview:_lblName];
+        
+        _lblState = [[UILabel alloc]initWithFrame:CGRectMake(79, 40, 66, 30)];
+        _lblState.font = [UIFont systemFontOfSize:15];
+        _lblState.textColor = [[UIColor grayColor]colorWithAlphaComponent:0.7];
+        [self.contentView addSubview:_lblState];
+        
+        _lblTime = [[UILabel alloc]initWithFrame:CGRectMake(145, 40, kWith-145, 30)];
+        _lblTime.font = [UIFont systemFontOfSize:15];
+        _lblTime.textColor = [[UIColor grayColor]colorWithAlphaComponent:0.7];
+        [self.contentView addSubview:_lblTime];
+        
+        UILabel *line = [[UILabel alloc]initWithFrame:CGRectMake(10, 80, kWith-20, 1)];
+        line.backgroundColor = kBoradColor;
+        [self.contentView addSubview:line];
+    }
+    return self;
+}
+-(void)onBtnCall:(UIButton *)btn{
+    
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"viedo" object:self];
+
+    
+}
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+@end

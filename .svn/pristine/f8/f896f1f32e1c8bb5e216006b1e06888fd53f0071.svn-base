@@ -1,0 +1,478 @@
+//
+//  KockDoctorApproveViewController.m
+//  HuaxiaDotor
+//
+//  Created by kock on 16/5/18.
+//  Copyright © 2016年 kock. All rights reserved.
+//  医生认证
+
+#import "KockDoctorApproveViewController.h"
+#import "KockImagePickSelect.h"
+#import "HospitalPersonalViewController.h"
+#import "CompanyPersonalViewController.h"
+#import "TitlePersonalViewController.h"
+#import "LevePersonalViewController.h"
+//执业证号
+#import "CartNumberViewController.h"
+//身份证
+#import "IDNumberViewController.h"
+//科室
+@interface KockDoctorApproveViewController ()<SendSelectImageDelegate>
+{
+    MBProgressHUD *_HUD;
+    NSString *_imagePicURL;
+}
+//执业证号
+@property (weak, nonatomic) IBOutlet UILabel *lbl_doctorID;
+//身份证
+@property (weak, nonatomic) IBOutlet UILabel *lbl_ID;
+//医院
+@property (weak, nonatomic) IBOutlet UILabel *lbl_hopotial;
+//科室
+@property (weak, nonatomic) IBOutlet UILabel *lbl_section;
+//职称
+@property (weak, nonatomic) IBOutlet UILabel *lbl_jobtitle;
+//级别
+@property (weak, nonatomic) IBOutlet UILabel *lbl_level;
+//医师证照片
+@property (weak, nonatomic) IBOutlet UIImageView *image_DoctorPhone;
+//图片选择器
+@property (strong, nonatomic) UIView *view_imageSelectPick;
+
+@property (strong, nonatomic) NSMutableArray *arr_hostList;
+@property (strong, nonatomic) NSMutableArray *arr_levelList;
+@property (strong, nonatomic) NSMutableArray *arr_titleList;
+//确认按钮
+@property (weak, nonatomic) IBOutlet UIButton *btnEnter;
+@property (strong, nonatomic) KockImagePickSelect *selectImage;
+@end
+
+@implementation KockDoctorApproveViewController
+
+-(void)viewWillDisappear:(BOOL)animated{
+    [super viewWillDisappear:animated];
+    
+    if ([self.from isEqualToString:@"眼科圈"]) {
+        self.tabBarController.tabBar.hidden = NO;
+    }
+}
+
+-(void)viewWillAppear:(BOOL)animated
+{
+    if (_int_enterType == 1)//已经认证
+    {
+        _btnEnter.hidden = YES;
+        self.view.userInteractionEnabled = NO;
+    }
+//    self.view.userInteractionEnabled = YES;
+    
+    self.view.backgroundColor = [UIColor whiteColor];
+    self.navigationController.navigationBar.tintColor = [UIColor whiteColor];
+
+    if ([self.from isEqualToString:@"眼科圈"]) {
+        self.tabBarController.tabBar.hidden = YES;
+    }
+    //从suerdefault登陆状态中获取医生的数据 并设置
+    [self getDoctorDatafoeUserDefault];
+    
+    //移除图片的图层
+    //移除图片的图层
+    if (self.childViewControllers.count!=0)
+    {
+        for (int i=0; i<self.childViewControllers.count; i++)
+        {
+            _selectImage = self.childViewControllers[i];
+            _selectImage.delegate = self;
+            if ([_selectImage isKindOfClass:[KockImagePickSelect class]])
+            {
+                [_selectImage.view removeFromSuperview];
+                [_selectImage removeFromParentViewController];
+            }
+        }
+    }
+}
+#pragma mark - 图片选择代理
+-(void)sendSelectImage:(UIImage *)image
+{
+
+    _HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    _HUD.mode = MBProgressHUDModeIndeterminate;
+    _HUD.labelText = @"正在加载";
+    _HUD.hidden = NO;
+    NSData *imageDate = UIImageJPEGRepresentation(image, 1.0);
+    NSMutableArray *imageDataArry = [NSMutableArray arrayWithObjects:imageDate, nil];
+    NSDictionary *header = @{@"verifyCode":[kUserDefatuel objectForKey:@"verifyCode"]};
+
+    [RequestManager CasePicWithURLString:[NSString stringWithFormat:@"%@/api/Share/PictureUpload",NET_URLSTRING] heads:header Parameters:imageDataArry Complation:^(NSDictionary *dicCom) {
+        _HUD.hidden = YES;
+
+        if ([[dicCom objectForKey:@"code"] integerValue]==10000)
+        {
+            
+            NSMutableArray *arryImageUrl = [NSMutableArray array];
+            arryImageUrl = [dicCom objectForKey:@"value"];
+            _imagePicURL = [[arryImageUrl firstObject] objectForKey:@"picUrl"];
+            _image_DoctorPhone.image = image;
+
+            NSMutableDictionary *dicUSer = [NSMutableDictionary dictionaryWithDictionary:[kUserDefatuel objectForKey:@"DoctorDataDic"]];
+            [dicUSer setObject:_imagePicURL forKey:@"licenseImages"];
+            [kUserDefatuel setObject:dicUSer forKey:@"DoctorDataDic"];
+            
+        }else
+        {
+            kAlter(@"上传图片失败");
+        }
+    } Fail:^(NSError *error) {
+        _HUD.hidden = YES;
+        kAlter(@"上传图片失败");
+    }];
+    
+    _selectImage.delegate = self;
+    [_selectImage.view removeFromSuperview];
+    [_selectImage removeFromParentViewController];
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    
+    //获取认证信息
+    [self GetLicenseInfo];
+    _arr_hostList = [[NSMutableArray alloc]init];
+    _arr_levelList = [[NSMutableArray alloc]init];
+    _arr_titleList = [[NSMutableArray alloc]init];
+    //创建用户的认证数据
+    NSUserDefaults *userDeaults = [NSUserDefaults standardUserDefaults];
+    NSMutableDictionary *dict = [[NSMutableDictionary alloc]init];
+    [userDeaults setObject:dict forKey:@"DoctorApporveData"];
+    
+    _image_DoctorPhone.layer.cornerRadius = 25;
+    _image_DoctorPhone.layer.masksToBounds = YES;
+    _btnEnter.layer.cornerRadius = 3;
+    _btnEnter.layer.masksToBounds = YES;
+}
+
+#pragma mark - 医师证设置按钮
+- (IBAction)btnAcitonDoctorPhoto:(UIButton *)sender
+{
+    //移除图片的图层
+    if (self.childViewControllers.count!=0)
+    {
+        for (int i=0; i<self.childViewControllers.count; i++)
+        {
+            _selectImage = self.childViewControllers[i];
+            _selectImage.delegate = self;
+            if ([_selectImage isKindOfClass:[KockImagePickSelect class]])
+            {
+                [_selectImage.view removeFromSuperview];
+                [_selectImage removeFromParentViewController];
+            }
+        }
+    }
+    _selectImage = [[KockImagePickSelect alloc]init];
+    _selectImage.view.frame = self.view.frame;
+    [self.view addSubview:_selectImage.view];
+    [self addChildViewController:_selectImage];
+    
+}
+
+#pragma mark -  提交认证信息
+- (IBAction)btnActionsubmit:(UIButton *)sender
+{
+    if (!_image_DoctorPhone.image)
+    {
+        kAlter(@"认证图不能为空");
+    }
+    else if ([_lbl_doctorID.text isEqualToString:@""]||_lbl_doctorID.text == nil)
+    {
+        kAlter(@"执业证号不能为空");
+    }
+    else if ([_lbl_ID.text isEqualToString:@""]||_lbl_ID.text == nil)
+    {
+        kAlter(@"身份证不能为空");
+    }
+    else if ([_lbl_hopotial.text isEqualToString:@""]||_lbl_hopotial.text == nil)
+    {
+        kAlter(@"医院不能为空");
+    }
+    else
+        if ([_lbl_section.text isEqualToString:@""]||_lbl_section.text == nil)
+    {
+        kAlter(@"科室不能为空");
+    }
+    else
+        if ([_lbl_jobtitle.text isEqualToString:@""]||_lbl_jobtitle.text == nil)
+    {
+        kAlter(@"职称不能为空");
+    }
+    else if ([_lbl_level.text isEqualToString:@""]||_lbl_level.text == nil)
+    {
+        kAlter(@"级别不能为空");
+    }
+    else
+    {
+        // 调用提交数据
+        [self createApprove];
+    }
+}
+
+#pragma mark - 执业证号
+- (IBAction)btnCreadCard:(UIButton *)sender
+{
+    //创建新增患者界面
+    UIStoryboard *storyboardName=[UIStoryboard storyboardWithName:@"PersonalStoryBoard" bundle:[NSBundle mainBundle]];
+    //指定对应的故事版
+    CartNumberViewController *newController=[storyboardName instantiateViewControllerWithIdentifier:@"stoyCreadCard"];
+    newController.str_idCard = _lbl_doctorID.text;
+    //推送
+    [self.navigationController pushViewController:newController animated:YES];
+}
+    #pragma mark - 身份证
+- (IBAction)btnID:(UIButton *)sender
+{
+    //创建新增患者界面
+    UIStoryboard *storyboardName=[UIStoryboard storyboardWithName:@"PersonalStoryBoard" bundle:[NSBundle mainBundle]];
+    //指定对应的故事版
+    IDNumberViewController *newController=[storyboardName instantiateViewControllerWithIdentifier:@"idStoryboard"];
+    newController.str_id = _lbl_ID.text;
+    //推送
+    [self.navigationController pushViewController:newController animated:YES];
+
+}
+
+
+#pragma mark - 提交认证请求
+-(void)createApprove
+{
+    
+    //从NSUserDefaults获取身份验证秘钥
+//    NSUserDefaults *userdefault=[NSUserDefaults standardUserDefaults];
+//    //获取用户秘钥
+//    NSString *verifyCode;
+//    verifyCode=[userdefault objectForKey:@"verifyCode"];
+//    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+//    manager.securityPolicy = [AFSecurityPolicy policyWithPinningMode:AFSSLPinningModeNone];
+//    manager.requestSerializer = [AFJSONRequestSerializer serializer];
+//    manager.responseSerializer = [AFJSONResponseSerializer serializer];
+//    [manager.requestSerializer setValue:@"application/json" forHTTPHeaderField:@"Accept"];
+//    //设置头文件
+//    //身份认证
+//    [manager.requestSerializer setValue:verifyCode forHTTPHeaderField:@"verifyCode"];
+//    [manager.requestSerializer setValue:@"application/json; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
+
+    //创建字典存放数据
+    NSMutableDictionary *parameters=[[NSMutableDictionary alloc]init];
+    //挂靠医院
+    [parameters setObject:_lbl_hopotial.text forKey:@"hosCode"];
+
+    //所属科室
+    [parameters setObject:_lbl_section.text forKey:@"deptCode"];
+
+    //认证职称
+    [parameters setObject:_lbl_jobtitle.text forKey:@"docTitle"];
+
+    //认证等级
+    [parameters setObject:_lbl_level.text forKey:@"docLevel"];
+
+    //执业证号
+    [parameters setObject:_lbl_doctorID.text forKey:@"certNo"];
+    //身份证
+    [parameters setObject:_lbl_ID.text forKey:@"idCard"];
+
+    NSDictionary *dic = [kUserDefatuel objectForKey:@"DoctorDataDic"];
+    //图片
+    if ([dic objectForKey:@"licenseImages"]) {
+        [parameters setObject:[dic objectForKey:@"licenseImages"] forKey:@"picUrl"];
+    }else
+    {
+        [parameters setObject:@"" forKey:@"picUrl"];
+    }
+    _HUD.hidden = NO;
+    [RequestManager postWithURLStringALL:DOCTORAPPROVEPOST heads:DICTIONARY_VERIFYCODE parameters:parameters success:^(id responseObject, BOOL ifTimeout) {
+        _HUD.hidden = YES;
+        
+        UIAlertController *alter = [UIAlertController alertControllerWithTitle:@"提示" message:@"提交成功，请等待认证" preferredStyle:UIAlertControllerStyleAlert];
+        [alter addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            //改变认证状态
+            NSUserDefaults *userDeaults = [NSUserDefaults standardUserDefaults];
+            NSMutableDictionary *dic = [NSMutableDictionary dictionaryWithDictionary:[userDeaults objectForKey:@"DoctorDataDic"]];
+            [dic setObject:@"1" forKey:@"state"];
+            [userDeaults setObject:dic forKey:@"DoctorDataDic"];
+            [[NSUserDefaults standardUserDefaults]synchronize];
+        }]];
+        [self presentViewController:alter animated:YES completion:nil];
+
+    } failure:^(NSError *error) {
+        _HUD.hidden = YES;
+    }];
+}
+
+//-(void)updatPic{
+//    _HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+//    _HUD.mode = MBProgressHUDModeIndeterminate;
+//    _HUD.labelText = @"正在加载";
+//    _HUD.hidden = NO;
+//    NSDictionary *header = @{@"verifyCode":[kUserDefatuel objectForKey:@"verifyCode"]};
+//    if (_image_DoctorPhone.image == nil) {
+//        [self createApprove:@""];
+//    }else
+//    {
+//        NSData *imageDate = UIImageJPEGRepresentation(_image_DoctorPhone.image, 1.0);
+//        NSMutableArray *imageDataArry = [NSMutableArray arrayWithObjects:imageDate, nil];
+//        
+//        [RequestManager CasePicWithURLString:[NSString stringWithFormat:@"%@/api/Share/PictureUpload",NET_URLSTRING] heads:header Parameters:imageDataArry Complation:^(NSDictionary *dicCom) {
+//            if ([[dicCom objectForKey:@"code"] integerValue]==10000)
+//            {
+//                NSMutableArray *arryImageUrl = [NSMutableArray array];
+//                arryImageUrl = [dicCom objectForKey:@"value"];
+//                [self createApprove:[[arryImageUrl firstObject] objectForKey:@"picUrl"]];
+//                
+//            }else
+//            {
+//                _HUD.hidden = YES;
+//                kAlter(@"上传图片失败");
+//            }
+//        } Fail:^(NSError *error) {
+//            _HUD.hidden = YES;
+//            kAlter(@"上传图片失败");
+//        }];
+//    }
+//}
+
+#pragma mark - 从登陆状态中获取医生的数据 并设置
+-(void)getDoctorDatafoeUserDefault
+{
+    NSUserDefaults *userDefaults=[NSUserDefaults standardUserDefaults];
+    //获取登录医生数据字典
+    NSMutableDictionary *userDic=[NSMutableDictionary new];
+    userDic=[userDefaults objectForKey:@"DoctorDataDic"];
+
+    //执业证号
+    _lbl_doctorID.text = userDic[@"certNo"];
+    //身份证
+    _lbl_ID.text = userDic[@"idCard"];
+    //医院
+    _lbl_hopotial.text = userDic[@"licenseHospital"];
+    //科室
+    _lbl_section.text = userDic[@"licenseDept"];
+    //职称
+    _lbl_jobtitle.text = userDic[@"licenseTitle"];
+    //级别
+    _lbl_level.text = userDic[@"licenseLevel"];
+    //医师证照片
+    NSString *imageURl = [NSString stringWithFormat:@"%@%@",NET_URLSTRING,userDic[@"licenseImages"]];
+    imageURl = [imageURl stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    [_image_DoctorPhone sd_setImageWithURL:[NSURL URLWithString:imageURl] placeholderImage:[UIImage imageNamed:@"默认婷婷"]];
+}
+
+#pragma mark - 医院
+- (IBAction)btnActionHospital:(UIButton *)sender
+{
+    //创建新增患者界面
+    UIStoryboard *storyboardName=[UIStoryboard storyboardWithName:@"PersonalStoryBoard" bundle:[NSBundle mainBundle]];
+    //指定对应的故事版
+    HospitalPersonalViewController *hosView=[storyboardName instantiateViewControllerWithIdentifier:@"hospitalList"];
+    hosView.arr_hosList = _arr_hostList;
+    hosView.str_hosListName = _lbl_hopotial.text;
+    //推送
+    [self.navigationController pushViewController:hosView animated:YES];
+}
+
+#pragma mark - 科室
+
+- (IBAction)btnDept:(id)sender {
+    
+    NSMutableArray *arry = [NSMutableArray array];
+    for (NSDictionary *dic in _arr_hostList) {
+        
+        if ([_lbl_hopotial.text isEqualToString:[dic objectForKey:@"hosName"]]) {
+            [arry addObjectsFromArray:[dic objectForKey:@"deptList"]];
+            break;
+        }
+    }
+    
+    //创建科室界面
+    UIStoryboard *storyboardName=[UIStoryboard storyboardWithName:@"PersonalStoryBoard" bundle:[NSBundle mainBundle]];
+    //指定对应的故事版
+    CompanyPersonalViewController *titleView=[storyboardName instantiateViewControllerWithIdentifier:@"deptViewController"];
+    titleView.arryData = arry;
+    //推送
+    [self.navigationController pushViewController:titleView animated:YES];
+}
+
+
+#pragma mark - 职称
+- (IBAction)btnActionTitleList:(UIButton *)sender
+{
+    //TitleList
+    //创建新增患者界面
+    UIStoryboard *storyboardName=[UIStoryboard storyboardWithName:@"PersonalStoryBoard" bundle:[NSBundle mainBundle]];
+    //指定对应的故事版
+    TitlePersonalViewController *titleView=[storyboardName instantiateViewControllerWithIdentifier:@"TitleList"];
+    titleView.arr_titleList = _arr_titleList;
+    titleView.str_name = _lbl_jobtitle.text;
+    //推送
+    [self.navigationController pushViewController:titleView animated:YES];
+
+}
+
+#pragma mark - 级别
+- (IBAction)btnLeaveList:(UIButton *)sender
+{
+    //levelList
+    //创建新增患者界面
+    UIStoryboard *storyboardName=[UIStoryboard storyboardWithName:@"PersonalStoryBoard" bundle:[NSBundle mainBundle]];
+    //指定对应的故事版
+    LevePersonalViewController *LevelView=[storyboardName instantiateViewControllerWithIdentifier:@"levelList"];
+    LevelView.arr_leaveList = _arr_levelList;
+    LevelView.str_name = _lbl_level.text;
+    //推送
+    [self.navigationController pushViewController:LevelView animated:YES];
+}
+
+#pragma mark - 获取认证信息
+-(void)GetLicenseInfo
+{
+    NSUserDefaults *userDefaults=[NSUserDefaults standardUserDefaults];
+    NSString *verifyCode=[userDefaults objectForKey:@"verifyCode"];
+    //HEAD
+    NSDictionary *heads=@{RESPONSE_KEY_VERIFYCODE:verifyCode};
+    
+    //获取需要上传的数据
+    //GET
+    [RequestManager getWithURLString:GETLICENTSEINFO heads:heads parameters:nil success:^(id responseObject)
+     {
+         NSMutableDictionary *dic = [[NSMutableDictionary alloc]init];
+         dic = responseObject[@"value"];
+         _arr_hostList = dic[@"hosList"];
+         _arr_titleList = dic[@"titleList"];
+         _arr_levelList = dic[@"levelList"];
+         
+     } failure:^(NSError *error)
+     {
+         NSLog(@"ERROR%@",error);
+     }];
+}
+
+-(void)dealloc
+{
+    //移除当前的通知对象
+    [[NSNotificationCenter defaultCenter]removeObserver:self name:@"setImageForHead" object:self];
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

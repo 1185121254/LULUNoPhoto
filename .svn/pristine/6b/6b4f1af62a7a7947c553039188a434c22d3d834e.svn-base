@@ -1,0 +1,194 @@
+//
+//  PatientInfoViewController.m
+//  HuaxiaPatient
+//
+//  Created by ydz on 17/2/28.
+//  Copyright © 2017年 欧阳晓隆. All rights reserved.
+//
+
+#import "PatientInfoViewController.h"
+#import "PCASPatientInfoTableViewCell.h"
+#import "UUImageAvatarBrowser.h"
+
+#define cellIdentify @"PCASInfoCell"
+
+@interface PatientInfoViewController ()<UITableViewDelegate,UITableViewDataSource>
+
+@property (weak, nonatomic) IBOutlet UITableView *tableViewInfo;
+
+@property (strong, nonatomic) IBOutlet UIView *viewHeader;
+@property (weak, nonatomic) IBOutlet UILabel *patientName;
+@property (weak, nonatomic) IBOutlet UILabel *patientAgeAndSex;
+@property (weak, nonatomic) IBOutlet UILabel *dataType;
+@property (weak, nonatomic) IBOutlet UILabel *deciveName;
+@property (weak, nonatomic) IBOutlet UILabel *checkDate;
+@property (weak, nonatomic) IBOutlet UILabel *checkDoctor;
+@property (weak, nonatomic) IBOutlet UILabel *checkPro;
+@property (weak, nonatomic) IBOutlet UILabel *checkName;
+
+@property (nonatomic, strong) NSArray *arryPic;
+
+@end
+
+@implementation PatientInfoViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+
+    [self setNavigationBar];
+    
+    [_tableViewInfo registerNib:[UINib nibWithNibName:@"PCASPatientInfoTableViewCell" bundle:nil] forCellReuseIdentifier:cellIdentify];
+
+}
+
+-(void)setNavigationBar
+{
+    self.title = @"PACS查询详情";
+    
+}
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    
+    [self getDataFromRequest];
+    
+}
+
+#pragma mark-------tablleViewDelegate
+
+-(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return 1;
+}
+
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return self.arryPic.count;
+}
+
+-(UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    return self.viewHeader;
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 188;
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return 200;
+}
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+
+    PCASPatientInfoTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIdentify forIndexPath:indexPath];
+    NSString *urlStr = self.arryPic[indexPath.row];
+    cell.picCount.text = [NSString stringWithFormat:@"图%ld",indexPath.row+1];
+    NSString *url = [NSString stringWithFormat:@"%@%@",NET_URLSTRING,urlStr];
+    NSString *url1 = [url stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    [cell.pic sd_setImageWithURL:[NSURL URLWithString:url1]];
+    
+    return cell;
+}
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    
+//    PCASPatientInfoTableViewCell *cell = [tableView cellForRowAtIndexPath:indexPath];
+    
+//    [UUImageAvatarBrowser showImage:cell.pic];
+    
+}
+
+#pragma mark-------设置基本数据
+
+-(void)setDefaultDataWithDic:(NSDictionary *)dic{
+
+    self.patientName.text = self.dicInfo[@"name"];
+    NSString *sex;
+    if ([self.dicInfo[@"sex"] integerValue] == 0) {
+        sex = @"女";
+    }else{
+        sex = @"男";
+    }
+    self.patientAgeAndSex.text = [NSString stringWithFormat:@"%@   %@岁",sex,self.dicInfo[@"age"]];
+    
+    self.dataType.text = [self getDataTypeWithNSString:dic[@"DataType"]];
+    self.deciveName.text = dic[@"DeviceName"];
+    self.checkDate.text = dic[@"ExamDate"];
+    self.checkDoctor.text = dic[@"ExamDoctorName"];
+    self.checkPro.text = dic[@"ExamItemName"];
+    self.checkName.text = dic[@"ExamModelName"];
+    self.arryPic = dic[@"PicList"];
+    
+    [self.tableViewInfo reloadData];
+}
+
+-(NSString *)getDataTypeWithNSString:(NSString *)str{
+    NSInteger type = [str integerValue];
+    if (type == 1) {
+        return @"视力";
+    }else if (type == 2){
+        return @"眼压";
+    }else if (type == 3){
+        return @"验光";
+    }else {
+        return @"文件";
+    }
+}
+
+#pragma mark-------获取网络数据
+
+-(void)getDataFromRequest{
+    
+    [RequestManager getWithURLStringALL:[NSString stringWithFormat:@"%@/api/His/GetPatientExamInfo",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:[self getRequestPara] viewConroller:self success:^(id responseObject) {
+        
+        [self setDefaultDataWithDic:(NSDictionary *)responseObject];
+        NSLog(@"++++++++++++%@",responseObject);
+
+        
+    } failure:^(NSError *error) {
+        
+        NSLog(@"%@",error);
+        
+    }];
+
+}
+
+-(NSDictionary *)getRequestPara{
+    NSString *ApplyExamCode;
+    NSString *ExamCode;
+    NSString *DataType;
+    
+    if (self.dataSource[@"ApplyExamCode"]) {
+        ApplyExamCode = self.dataSource[@"ApplyExamCode"];
+    }else{
+        ApplyExamCode = @"";
+    }
+    if (self.dataSource[@"DataType"]) {
+        DataType = self.dataSource[@"DataType"];
+    }else{
+        DataType = @"";
+    }
+    if (self.dataSource[@"ExamCode"]) {
+        ExamCode = self.dataSource[@"ExamCode"];
+    }else{
+        ExamCode = @"";
+    }
+    return @{@"ApplyExamCode":ApplyExamCode,@"ExamCode":ExamCode,@"DataType":DataType};
+
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="11762" systemVersion="15G1217" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES">
+    <device id="retina4_7" orientation="portrait">
+        <adaptation id="fullscreen"/>
+    </device>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="11757"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="SelectCityViewController">
+            <connections>
+                <outlet property="cityTableview" destination="4Ju-HV-NGp" id="zdv-ke-Nfc"/>
+                <outlet property="provinceTableview" destination="u7B-Hh-k0w" id="rh1-nB-IOT"/>
+                <outlet property="view" destination="i5M-Pr-FkT" id="sfx-zR-JGt"/>
+            </connections>
+        </placeholder>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <view clearsContextBeforeDrawing="NO" contentMode="scaleToFill" id="i5M-Pr-FkT">
+            <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+            <subviews>
+                <tableView clipsSubviews="YES" tag="11011" contentMode="scaleToFill" alwaysBounceVertical="YES" style="plain" rowHeight="44" sectionHeaderHeight="28" sectionFooterHeight="28" translatesAutoresizingMaskIntoConstraints="NO" id="u7B-Hh-k0w">
+                    <rect key="frame" x="0.0" y="64" width="187.5" height="603"/>
+                    <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                    <connections>
+                        <outlet property="dataSource" destination="-1" id="IHq-AO-T7f"/>
+                        <outlet property="delegate" destination="-1" id="grM-FR-05S"/>
+                    </connections>
+                </tableView>
+                <tableView clipsSubviews="YES" tag="11012" contentMode="scaleToFill" alwaysBounceVertical="YES" style="plain" separatorStyle="none" rowHeight="44" sectionHeaderHeight="28" sectionFooterHeight="28" translatesAutoresizingMaskIntoConstraints="NO" id="4Ju-HV-NGp">
+                    <rect key="frame" x="187.5" y="64" width="187.5" height="603"/>
+                    <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                    <connections>
+                        <outlet property="dataSource" destination="-1" id="Y3g-Un-s6G"/>
+                        <outlet property="delegate" destination="-1" id="D7O-Hi-S5c"/>
+                    </connections>
+                </tableView>
+            </subviews>
+            <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+            <constraints>
+                <constraint firstItem="4Ju-HV-NGp" firstAttribute="top" secondItem="i5M-Pr-FkT" secondAttribute="top" constant="64" id="3jk-iE-x43"/>
+                <constraint firstItem="4Ju-HV-NGp" firstAttribute="leading" secondItem="u7B-Hh-k0w" secondAttribute="trailing" id="5vV-rZ-wMb"/>
+                <constraint firstAttribute="bottom" secondItem="4Ju-HV-NGp" secondAttribute="bottom" id="9Jh-3r-vcm"/>
+                <constraint firstItem="u7B-Hh-k0w" firstAttribute="top" secondItem="i5M-Pr-FkT" secondAttribute="top" constant="64" id="EbJ-LW-wuL"/>
+                <constraint firstAttribute="trailing" secondItem="4Ju-HV-NGp" secondAttribute="trailing" id="KQ6-NJ-07p"/>
+                <constraint firstItem="u7B-Hh-k0w" firstAttribute="leading" secondItem="i5M-Pr-FkT" secondAttribute="leading" id="YNP-I2-efb"/>
+                <constraint firstItem="u7B-Hh-k0w" firstAttribute="top" secondItem="i5M-Pr-FkT" secondAttribute="top" constant="64" id="d4v-Ow-pcC"/>
+                <constraint firstAttribute="bottom" secondItem="u7B-Hh-k0w" secondAttribute="bottom" id="fyR-uA-jbJ"/>
+                <constraint firstItem="u7B-Hh-k0w" firstAttribute="width" secondItem="4Ju-HV-NGp" secondAttribute="width" id="hbm-b7-tt6"/>
+                <constraint firstItem="4Ju-HV-NGp" firstAttribute="top" secondItem="i5M-Pr-FkT" secondAttribute="top" constant="64" id="wft-WZ-K3N"/>
+            </constraints>
+            <variation key="default">
+                <mask key="constraints">
+                    <exclude reference="d4v-Ow-pcC"/>
+                    <exclude reference="wft-WZ-K3N"/>
+                </mask>
+            </variation>
+            <point key="canvasLocation" x="208" y="193"/>
+        </view>
+    </objects>
+</document>

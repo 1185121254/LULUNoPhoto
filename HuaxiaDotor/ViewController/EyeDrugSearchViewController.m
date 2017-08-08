@@ -1,0 +1,143 @@
+//
+//  EyeDrugSearchViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/9/6.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "EyeDrugSearchViewController.h"
+#import "ShowElectronViewController.h"
+
+@interface EyeDrugSearchViewController ()<UITableViewDelegate ,UITableViewDataSource>
+{
+    UITableView *_tableEyeDrugSearch;
+    NSMutableArray *_arryData;
+    
+    UITextField *_text;
+}
+@end
+
+@implementation EyeDrugSearchViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+
+    UIBarButtonItem *itemLeft = [[UIBarButtonItem alloc]initWithImage:[UIImage imageNamed:@"返回"] style:UIBarButtonItemStylePlain target:self action:@selector(onletfBtnBack)];
+    self.navigationItem.leftBarButtonItem = itemLeft;
+    
+    self.title = @"眼科常用药品";
+    self.automaticallyAdjustsScrollViewInsets =  NO;
+    self.view.backgroundColor = kBackgroundColor;
+    
+    _text= [[UITextField alloc]initWithFrame:CGRectMake(10, 64+10, kWith-20-70, 30)];
+    _text.placeholder = @"请根据药品名字进行搜索";
+    _text.borderStyle = UITextBorderStyleRoundedRect;
+    _text.textAlignment = 1;
+    _text.clearButtonMode = UITextFieldViewModeAlways;
+    [self.view addSubview:_text];
+    
+    UIButton  *btnSearch = [UIButton buttonWithType:UIButtonTypeCustom];
+    btnSearch.frame = CGRectMake(kWith - 70, 64+10, 60, 30);
+    [btnSearch setTitle:@"搜索" forState:UIControlStateNormal];
+    btnSearch.backgroundColor = BLUECOLOR_STYLE;
+    btnSearch.layer.cornerRadius = 3;
+    [btnSearch addTarget:self action:@selector(onBtnSearchEyeDrug) forControlEvents:UIControlEventTouchUpInside];
+    btnSearch.layer.masksToBounds = YES;
+    [self.view addSubview:btnSearch];
+    
+    _tableEyeDrugSearch = [[UITableView alloc]initWithFrame:CGRectMake(0, 114, kWith, kHeight-114) style:UITableViewStyleGrouped];
+    _tableEyeDrugSearch.dataSource = self;
+    _tableEyeDrugSearch.delegate = self;
+    [self.view addSubview:_tableEyeDrugSearch];
+
+}
+
+-(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return 1;
+}
+
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return _arryData.count;
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    return 0.1;
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 0.1;
+}
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    
+    static NSString *identifier=@"eyeDrug";
+    
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:identifier];
+    if (cell == nil) {
+        cell=[[UITableViewCell alloc]initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:identifier];
+    }
+    
+    NSDictionary *dic = _arryData[indexPath.row];
+    
+    cell.textLabel.text = dic[@"name"];
+    
+    return cell;
+}
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(nonnull NSIndexPath *)indexPath
+{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    
+    NSDictionary *Urldic = _arryData[indexPath.row];
+
+    ShowElectronViewController *webViewcontroller=[[ShowElectronViewController alloc]init];
+    webViewcontroller.electronTitle = Urldic[@"name"];
+    webViewcontroller.strURL = Urldic[@"webUrl"];
+    [self.navigationController pushViewController:webViewcontroller animated:YES];
+}
+
+
+
+-(void)onBtnSearchEyeDrug{
+
+    [self.view endEditing:YES];
+    
+    
+    NSDictionary *dic = @{@"name":_text.text};
+    [RequestManager getWithURLStringALL:[NSString stringWithFormat:@"%@/api/Doctor/SearchEyeDrugList",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:dic viewConroller:self success:^(id responseObject) {
+        NSMutableArray *arry = [NSMutableArray arrayWithArray:(NSArray *)responseObject];
+
+        if (arry == nil ||arry.count == 0) {
+            kAlter(@"无结果");
+        }else
+        {
+            _arryData = arry;
+            [_tableEyeDrugSearch reloadData];
+        }
+
+    } failure:^(NSError *error) {
+    }];
+}
+
+-(void)onletfBtnBack{
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

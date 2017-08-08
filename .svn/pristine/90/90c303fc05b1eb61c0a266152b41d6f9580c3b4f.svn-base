@@ -1,0 +1,134 @@
+//
+//  CasePersonViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/5/24.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "CasePersonViewController.h"
+#import "CaseDocListViewController.h"
+#import "CaseCommentViewController.h"
+
+@interface CasePersonViewController ()
+
+@end
+
+@implementation CasePersonViewController
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    
+    for (UIView *view in self.view.subviews) {
+        [view removeFromSuperview];
+    }
+    
+    for (NSDictionary *dic in self.arryAdd) {
+        NSMutableArray *arryMU = [NSMutableArray arrayWithArray:self.arryMember];
+        [arryMU addObject:dic];
+        self.arryMember  = arryMU;
+    }
+    [self.arryAdd removeAllObjects];
+    
+    float width = (kWith - 20 - 30)/4;
+    float heiht = 0.0 ;
+    UIScrollView *view_scrollerView = [[UIScrollView alloc]initWithFrame:CGRectMake(0, 0, kWith,kHeight)];
+    for (NSInteger i = 0; i<self.arryMember.count + 1; i++) {
+        
+        [self.view addSubview:view_scrollerView];
+        UIView *viewBottom = [[UIView alloc]init];
+        viewBottom.frame = CGRectMake(10+(width+10)*(i%4), 60+10+(width+30+10)*(i/4), width, width+30);
+        heiht = 60+10+(width+30+10)*(i/4) + width+30+10;
+//        [self.view addSubview:viewBottom];
+//        viewBottom.backgroundColor = [UIColor colorWithRed:1.000 green:0.000 blue:0.000 alpha:0.283];
+//        view_scrollerView.backgroundColor = [UIColor colorWithRed:0.000 green:0.000 blue:1.000 alpha:0.190];
+        [view_scrollerView addSubview:viewBottom];
+        
+        if ( i != self.arryMember.count) {
+            NSDictionary *dicData = self.arryMember[i];
+            NSString *old = [NSString stringWithFormat:@"%@%@",NET_URLSTRING,[dicData objectForKey:@"picFileName"]];
+            NSString *new = [old stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+            UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+            [btn sd_setImageWithURL:[NSURL URLWithString:new] forState:UIControlStateNormal placeholderImage:[UIImage imageNamed:@"ic_login_account"]];
+            btn.frame = CGRectMake(0, 0, width , width);
+            btn.layer.cornerRadius = width/2;
+            btn.layer.masksToBounds =YES;
+            [viewBottom addSubview:btn];
+            
+            UILabel *lbl = [[UILabel alloc]init];
+            lbl.textAlignment = 1;
+            lbl.font = [UIFont systemFontOfSize:14];
+            lbl.frame = CGRectMake(0, width+5, width, 20);
+            lbl.text = [dicData objectForKey:@"userName"];
+            [viewBottom addSubview:lbl];
+        }
+        else
+        {
+            UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+            [btn setBackgroundImage:[UIImage imageNamed:@"l+"] forState:UIControlStateNormal];
+            btn.frame = CGRectMake(0, 5, width , width);
+            btn.layer.cornerRadius = width/2;
+            btn.layer.masksToBounds =YES;
+            [btn addTarget:self action:@selector(onInviye) forControlEvents:UIControlEventTouchUpInside];
+            [viewBottom addSubview:btn];
+        }
+    }
+    view_scrollerView.contentSize = CGSizeMake(kWith, heiht);
+    self.title  = [NSString stringWithFormat:@"全部成员(%ld)",self.arryMember.count];
+}
+
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    self.automaticallyAdjustsScrollViewInsets = NO;
+    
+    self.view.backgroundColor = [UIColor whiteColor];
+    
+    UIButton *btnleft = [UIButton buttonWithType:UIButtonTypeCustom];
+    btnleft.frame = CGRectMake(0, 0, 13, 22);
+    [btnleft addTarget:self action:@selector(OnRightLeft) forControlEvents:UIControlEventTouchUpInside];
+    [btnleft setBackgroundImage:[UIImage imageNamed:@"返回"] forState:UIControlStateNormal];
+    UIBarButtonItem *letf = [[UIBarButtonItem alloc]initWithCustomView:btnleft];
+    self.navigationItem.leftBarButtonItem = letf;
+}
+
+-(void)OnRightLeft{
+    for (UIViewController *VC in self.navigationController.viewControllers) {
+        if ([VC isKindOfClass:[CaseCommentViewController class]]) {
+            CaseCommentViewController *caseComm = (CaseCommentViewController *)VC;
+            caseComm.from = @"CaseNotHistory";
+            [self.navigationController popToViewController:caseComm animated:YES];
+            break;
+        }
+    }
+}
+
+-(void)onInviye{
+
+    CaseDocListViewController *doc = [[CaseDocListViewController alloc]init];
+    doc.from = @"CommPerson";
+    doc.arryS = self.arryMember;
+    doc.teamID = self.teamID;
+    doc.disId = self.disId;
+    [self.navigationController pushViewController:doc animated:YES];
+    
+    
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

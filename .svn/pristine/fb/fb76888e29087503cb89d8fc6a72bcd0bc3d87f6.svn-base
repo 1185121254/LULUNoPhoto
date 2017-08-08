@@ -1,0 +1,155 @@
+//
+//  SettingViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/5/16.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "SettingViewController.h"
+#import "VideoTableViewController.h"
+#import "HomeViewController.h"
+
+
+@interface SettingViewController ()<BasePickerViewDelegate>
+{
+
+    NSArray *_arryPicker;
+    
+    UILabel *_lblCountBottom;
+    UISwitch *_switc;
+    
+    BasePickerView *_basePickerView;
+}
+@end
+
+@implementation SettingViewController
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    self.navigationController.navigationBar.hidden = NO;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"设置";
+    self.view.backgroundColor = [UIColor whiteColor];
+    
+    _arryPicker = [NSArray arrayWithObjects:@"1",@"2",@"3",@"4",@"5",@"6",@"7",@"8",@"9",@"10", nil];
+    
+    UIBarButtonItem *right = [[UIBarButtonItem alloc]initWithTitle:@"确定" style:UIBarButtonItemStylePlain target:self action:@selector(onRightItem)];
+    self.navigationItem.rightBarButtonItem = right;
+    
+    UIButton *btnleft = [UIButton buttonWithType:UIButtonTypeCustom];
+    btnleft.frame = CGRectMake(0, 0, 13, 22);
+    [btnleft addTarget:self action:@selector(onLeft) forControlEvents:UIControlEventTouchUpInside];
+    [btnleft setBackgroundImage:[UIImage imageNamed:@"返回"] forState:UIControlStateNormal];
+    UIBarButtonItem *letf = [[UIBarButtonItem alloc]initWithCustomView:btnleft];
+    self.navigationItem.leftBarButtonItem = letf;
+    
+    UILabel *lblFree =  [[UILabel alloc]initWithFrame:CGRectMake(20, 70, 100, 30)];
+    lblFree.text = @"是否开启义诊:";
+    lblFree.font = [UIFont systemFontOfSize:15];
+    [self.view addSubview:lblFree];
+    
+    UILabel *lblCount = [[UILabel alloc]initWithFrame:CGRectMake(20, 110, 100, 30)];
+    lblCount.text = @"就诊数量  *:";
+    lblCount.font = [UIFont systemFontOfSize:15];
+    [self.view addSubview:lblCount];
+    
+     _switc= [[UISwitch alloc]initWithFrame:CGRectMake(130, 70, 100, 30)];
+    [_switc addTarget:self action:@selector(onSwitch:) forControlEvents:UIControlEventValueChanged];
+    [self.view addSubview:_switc];
+    
+    _lblCountBottom= [[UILabel alloc]initWithFrame:CGRectMake(130, 110, 100, 30)];
+    _lblCountBottom.textAlignment = 1;
+    _lblCountBottom.font = [UIFont systemFontOfSize:15];
+    _lblCountBottom.layer.borderWidth = 1;
+    _lblCountBottom.text = @"5";
+    _lblCountBottom.layer.borderColor  = [[UIColor colorWithRed:67/255.0 green:74/255.0 blue:84/255.0 alpha:1]CGColor];
+    [self.view addSubview:_lblCountBottom];
+    
+    UIButton *btnPicker = [UIButton buttonWithType:UIButtonTypeCustom];
+    btnPicker.frame = _lblCountBottom.frame;
+    [btnPicker addTarget:self action:@selector(onPicker) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:btnPicker];
+    
+    _basePickerView  = [[BasePickerView alloc]init];
+    _basePickerView.delegate = self;
+    [self.view addSubview:_basePickerView];
+}
+
+
+#pragma mark---------Switch
+-(void)onSwitch:(UISwitch *)switc{
+    
+}
+
+#pragma mark---------选择器
+-(void)onPicker{
+    NSMutableArray *arry = [NSMutableArray array];
+    [arry addObject:_arryPicker];
+    [_basePickerView pickerDelegateShow:arry];
+}
+
+-(void)setPicker:(NSString *)count{
+    _lblCountBottom.text = count;
+}
+
+#pragma mark---------右按钮项  开启视频问诊
+-(void)onRightItem{
+    if (_lblCountBottom.text == nil || [_lblCountBottom.text isEqualToString:@""]) {
+        kAlter(@"就诊数量为空");
+        return;
+    }
+    NSMutableDictionary *dic = [[NSMutableDictionary alloc]init];
+    [dic setObject:[kUserDefatuel objectForKey:@"id"] forKey:@"doctorId"];
+    [dic setObject:@([_lblCountBottom.text integerValue]) forKey:@"serviceAmount"];
+    [dic setObject:@(_switc.on) forKey:@"isFree"];
+    MBProgressHUD *_HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    _HUD.mode = MBProgressHUDModeIndeterminate;
+    _HUD.labelText = @"正在加载";
+    _HUD.hidden = NO;
+    [RequestManager settingPublick:[NSString stringWithFormat:@"%@/api/Share/ServiceRecordAdd",NET_URLSTRING] Parameters:dic Complation:^(NSNumber *code, NSString *xtstr) {
+        _HUD.hidden = YES;
+        if ([code integerValue] == 10000) {
+            VideoTableViewController *tab = [[VideoTableViewController alloc]init];
+            tab.xtrID = xtstr;
+            [self.navigationController pushViewController:tab animated:YES];
+        }
+        else
+        {
+            kAlter(@"提交失败");
+        }
+    } Fail:^(NSError *error) {
+        _HUD.hidden =YES;
+        kAlter(@"提交失败");
+    }];
+    
+}
+
+#pragma mark---------左按钮项
+-(void)onLeft{
+ 
+    NSArray *arry = self.navigationController.viewControllers;
+    HomeViewController *home = arry[0];
+    [self.navigationController popToViewController:home animated:YES];
+    
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

@@ -1,0 +1,20 @@
+//
+//  CaseDiscussTableViewCell.h
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/5/24.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface CaseDiscussTableViewCell : UITableViewCell
+{
+    UILabel *_line;
+}
+@property(nonatomic,strong)UILabel *lblName;
+@property(nonatomic,strong)UILabel *lblTime;
+@property(nonatomic,strong)UILabel *lblDesp;
+//@property(nonatomic,strong)UILabel *lblNewMeg;
+
+@end

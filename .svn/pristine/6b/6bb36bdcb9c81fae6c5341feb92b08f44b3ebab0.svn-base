@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="10117" systemVersion="15E65" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" initialViewController="01J-lp-oVM">
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="10085"/>
+    </dependencies>
+    <scenes>
+        <!--View Controller-->
+        <scene sceneID="EHf-IW-A2E">
+            <objects>
+                <viewController id="01J-lp-oVM" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="Llm-lL-Icb"/>
+                        <viewControllerLayoutGuide type="bottom" id="xb3-aO-Qok"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3">
+                        <rect key="frame" x="0.0" y="0.0" width="320" height="568"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="医生 6s 11" translatesAutoresizingMaskIntoConstraints="NO" id="6M5-q3-nkI">
+                                <rect key="frame" x="40" y="142" width="240" height="284"/>
+                                <color key="backgroundColor" red="0.98039215686274506" green="0.98039215686274506" blue="0.98039215686274506" alpha="1" colorSpace="calibratedRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="240" id="W2o-S7-Uns"/>
+                                    <constraint firstAttribute="height" constant="284" id="tpL-dp-yCm"/>
+                                </constraints>
+                            </imageView>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="版本号    1.1.13" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="j5z-wd-Gh6">
+                                <rect key="frame" x="0.0" y="478" width="320" height="55"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                        </subviews>
+                        <color key="backgroundColor" red="0.98039215686274506" green="0.98039215686274506" blue="0.98039215686274506" alpha="1" colorSpace="calibratedRGB"/>
+                        <constraints>
+                            <constraint firstItem="6M5-q3-nkI" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="5fW-ha-4Dh"/>
+                            <constraint firstItem="j5z-wd-Gh6" firstAttribute="leading" secondItem="Ze5-6b-2t3" secondAttribute="leading" id="63c-kM-uMT"/>
+                            <constraint firstItem="j5z-wd-Gh6" firstAttribute="top" secondItem="6M5-q3-nkI" secondAttribute="bottom" constant="52" id="O2z-7L-uPA"/>
+                            <constraint firstItem="6M5-q3-nkI" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="s1j-9U-2pX"/>
+                            <constraint firstItem="xb3-aO-Qok" firstAttribute="top" secondItem="j5z-wd-Gh6" secondAttribute="bottom" constant="35" id="sBy-ru-LEm"/>
+                            <constraint firstAttribute="trailing" secondItem="j5z-wd-Gh6" secondAttribute="trailing" id="yWx-PC-yfN"/>
+                        </constraints>
+                    </view>
+                    <extendedEdge key="edgesForExtendedLayout" bottom="YES"/>
+                    <simulatedScreenMetrics key="simulatedDestinationMetrics" type="retina4"/>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="iYj-Kq-Ea1" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="2" y="310"/>
+        </scene>
+    </scenes>
+    <resources>
+        <image name="医生 6s 11" width="1122" height="1326"/>
+    </resources>
+</document>

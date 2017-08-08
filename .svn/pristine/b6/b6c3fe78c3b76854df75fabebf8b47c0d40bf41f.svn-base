@@ -1,0 +1,348 @@
+//
+//  PersonalInfoDataViewController.m
+//  HuaxiaDotor
+//
+//  Created by kock on 16/5/17.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "PersonalInfoDataViewController.h"
+#import "KockImagePickSelect.h"
+#import "KockNameViewController.h"
+#import "KockSexViewController.h"
+#import "KockPhoneSelect.h"
+#import "KockBegoodAtViewController.h"
+#import "KockDoctorApproveViewController.h"
+#import "KockDoctorintroduceViewController.h"
+
+@interface PersonalInfoDataViewController ()<SendSelectImageDelegate,BaseDatePickerDelegate>{
+    MBProgressHUD *_HUD;
+}
+@property (weak, nonatomic) IBOutlet UIImageView *image_head;
+@property (weak, nonatomic) IBOutlet UILabel *lbl_name;
+@property (weak, nonatomic) IBOutlet UILabel *lbl_sex;
+@property (weak, nonatomic) IBOutlet UILabel *lbl_borthData;
+@property (weak, nonatomic) IBOutlet UILabel *lbl_begoodAt;
+@property (weak, nonatomic) IBOutlet UILabel *lbl_tel;
+//认证
+@property (weak, nonatomic) IBOutlet UILabel *lbl_approve;
+@property (assign, nonatomic) int enter;
+//介绍
+@property (weak, nonatomic) IBOutlet UILabel *lbl_referral;
+@property (strong, nonatomic) KockImagePickSelect *selectImage;
+@property (strong, nonatomic) BaseDatePickerViewController *basePicker;
+@end
+
+@implementation PersonalInfoDataViewController
+
+-(void)viewWillAppear:(BOOL)animated
+{
+    NSUserDefaults *userDefaults=[NSUserDefaults standardUserDefaults];
+    //获取用户秘钥
+    _dic_doctorData=[userDefaults objectForKey:@"DoctorDataDic"];
+    self.view.backgroundColor = [UIColor whiteColor];
+    self.navigationController.navigationBar.hidden = NO;
+    NSString *imageURl = [NSString stringWithFormat:@"%@%@",NET_URLSTRING,_dic_doctorData[@"picFileName"]];
+    imageURl = [imageURl stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    [_image_head sd_setImageWithURL:[NSURL URLWithString:imageURl]];
+    _image_head.layer.cornerRadius=_image_head.frame.size.height/2;
+    [_image_head.layer setMasksToBounds:YES];
+    _lbl_name.text = _dic_doctorData[@"userName"];
+    NSInteger int_sex = [_dic_doctorData[@"sex"] integerValue];
+    if (int_sex==1)
+    {
+        _lbl_sex.text=@"男";
+    }
+    else
+    {
+         _lbl_sex.text=@"女";
+    }
+    _lbl_borthData.text = _dic_doctorData[@"birthDay"];
+    _lbl_begoodAt.text = _dic_doctorData[@"speciality"];
+    _lbl_approve.text = _dic_doctorData[@"isAuthenticated"];
+    _lbl_referral.text = _dic_doctorData[@"introduce"];
+    _lbl_tel.text = _dic_doctorData[@"tel"];
+    _lbl_approve.textColor = BLUECOLOR_STYLE;
+    NSDictionary *dic = [kUserDefatuel objectForKey:@"DoctorDataDic"];
+    int i = (int)[[dic objectForKey:@"state"]integerValue];
+    if (i == 0)
+    {
+        _lbl_approve.text = @"未认证";
+        _enter = 0;
+    }else if (i == 1)
+    {
+        _lbl_approve.text = @"认证中";
+        _enter = 0;
+    }else if (i == 2)
+    {
+        _lbl_approve.text = @"已认证";
+        _enter = 1;
+    }
+    //移除图片的图层
+    if (self.childViewControllers.count!=0)
+    {
+        for (int i=0; i<self.childViewControllers.count; i++)
+        {
+            _selectImage = self.childViewControllers[i];
+            _selectImage.delegate = self;
+            if ([_selectImage isKindOfClass:[KockImagePickSelect class]])
+            {
+                [_selectImage.view removeFromSuperview];
+                [_selectImage removeFromParentViewController];
+            }
+        }
+    }
+}
+
+#pragma mark - 选择图片代理
+-(void)sendSelectImage:(UIImage *)image
+{
+    _image_head.image = image;
+    [self postImageSent];
+    [_selectImage.view removeFromSuperview];
+    [_selectImage removeFromParentViewController];
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    //时间选择初始化
+    dispatch_queue_t queue = dispatch_get_main_queue();
+    dispatch_async(queue, ^{
+        _basePicker = [[BaseDatePickerViewController alloc]initWithModel:1];
+        _basePicker.delegate = self;
+        [self.view addSubview:_basePicker];
+    });
+
+}
+
+#pragma mark - 设置头像 调用selectPickview
+- (IBAction)setHeadAction:(UIButton *)sender
+{
+    //移除图片的图层
+    if (self.childViewControllers.count!=0)
+    {
+        for (int i=0; i<self.childViewControllers.count; i++)
+        {
+            _selectImage = self.childViewControllers[i];
+            _selectImage.delegate = self;
+            if ([_selectImage isKindOfClass:[KockImagePickSelect class]])
+            {
+                [_selectImage.view removeFromSuperview];
+                [_selectImage removeFromParentViewController];
+            }
+        }
+    }
+    _selectImage = [[KockImagePickSelect alloc]init];
+    _selectImage.delegate = self;
+    _selectImage.view.frame = self.view.frame;
+    
+     [self.view addSubview:_selectImage.view];
+     [self addChildViewController:_selectImage];
+}
+
+#pragma mark - 设置姓名
+- (IBAction)setNameAction:(UIButton *)sender
+{
+    //创建新增患者界面
+    UIStoryboard *storyboardName=[UIStoryboard storyboardWithName:@"PersonalStoryBoard" bundle:[NSBundle mainBundle]];
+    //指定对应的故事版
+    KockNameViewController *newView=[storyboardName instantiateViewControllerWithIdentifier:@"namestroy"];
+    newView.strName = _lbl_name.text;
+    //推送
+    [self.navigationController pushViewController:newView animated:YES];
+}
+
+#pragma mark - 设置性别
+- (IBAction)setSexAction:(UIButton*)sender
+{
+    //创建新增患者界面
+    UIStoryboard *storyboardName=[UIStoryboard storyboardWithName:@"PersonalStoryBoard" bundle:[NSBundle mainBundle]];
+    //指定对应的故事版
+    KockSexViewController *newView=[storyboardName instantiateViewControllerWithIdentifier:@"Sexstroy"];
+    newView.str_Sex = _lbl_sex.text;
+    //推送
+    [self.navigationController pushViewController:newView animated:YES];
+}
+
+#pragma mark - 设置出生日期
+- (IBAction)setBorthDate:(UIButton *)sender
+{
+    [self pickViewShow];
+}
+
+#pragma mark - 手机号码
+- (IBAction)btnTelNumber:(UIButton *)sender
+{
+    //创建新增患者界面
+    UIStoryboard *storyboardName=[UIStoryboard storyboardWithName:@"PersonalStoryBoard" bundle:[NSBundle mainBundle]];
+    //指定对应的故事版
+    KockPhoneSelect *newView=[storyboardName instantiateViewControllerWithIdentifier:@"phonestroy"];
+    newView.strPhone = _lbl_tel.text;
+    //推送
+    [self.navigationController pushViewController:newView animated:YES];
+}
+
+#pragma mark - 设置擅长
+- (IBAction)beGoodAtAction:(UIButton *)sender
+{
+    //创建新增患者界面
+    UIStoryboard *storyboardName=[UIStoryboard storyboardWithName:@"PersonalStoryBoard" bundle:[NSBundle mainBundle]];
+    //指定对应的故事版
+    KockBegoodAtViewController *newView=[storyboardName instantiateViewControllerWithIdentifier:@"begoodAt"];
+    newView.str_begoodat = _lbl_begoodAt.text;
+    //推送
+    [self.navigationController pushViewController:newView animated:YES];
+}
+
+#pragma mark - 认证
+- (IBAction)approveAction:(UIButton *)sender
+{
+    //创建新增患者界面
+    UIStoryboard *storyboardName=[UIStoryboard storyboardWithName:@"PersonalStoryBoard" bundle:[NSBundle mainBundle]];
+    //指定对应的故事版
+    KockDoctorApproveViewController *newView=[storyboardName instantiateViewControllerWithIdentifier:@"Approvestory"];
+    newView.int_enterType = _enter;
+    //推送
+    [self.navigationController pushViewController:newView animated:YES];
+}
+
+#pragma mark - 介绍
+- (IBAction)referralAction:(UIButton *)sender
+{
+    //introducestory
+    //创建新增患者界面
+    UIStoryboard *storyboardName=[UIStoryboard storyboardWithName:@"PersonalStoryBoard" bundle:[NSBundle mainBundle]];
+    //指定对应的故事版
+    KockDoctorintroduceViewController *newView=[storyboardName instantiateViewControllerWithIdentifier:@"introducestory"];
+    newView.str_introduce = _lbl_referral.text;
+    //推送
+    [self.navigationController pushViewController:newView animated:YES];
+}
+
+#pragma mark - 提交图片改变请求
+-(void)postImageSent
+{
+    if (_HUD == nil) {
+        _HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    }
+    _HUD.mode = MBProgressHUDModeIndeterminate;
+    _HUD.labelText = @"正在加载";
+    _HUD.hidden = NO;
+    //从NSUserDefaults获取身份验证秘钥
+    NSUserDefaults *userdefault=[NSUserDefaults standardUserDefaults];
+    //获取用户秘钥
+    NSString *verifyCode;
+    verifyCode=[userdefault objectForKey:@"verifyCode"];
+    AFHTTPSessionManager *manager=[AFHTTPSessionManager manager];
+    manager.securityPolicy = [AFSecurityPolicy policyWithPinningMode:AFSSLPinningModeNone];
+    manager.requestSerializer = [AFJSONRequestSerializer serializer];
+    manager.responseSerializer = [AFJSONResponseSerializer serializer];
+    [manager.requestSerializer setValue:@"application/json" forHTTPHeaderField:@"Accept"];
+    //设置头文件
+    [manager.requestSerializer setValue:verifyCode forHTTPHeaderField:@"verifyCode"];
+    [manager.requestSerializer setValue:@"application/json; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
+    //创建字典存放数据
+    NSMutableDictionary *parameters=[[NSMutableDictionary alloc]init];
+    
+    [manager POST:SETTINGHEADIMAGE parameters:parameters constructingBodyWithBlock:^(id<AFMultipartFormData>  _Nonnull formData){
+        NSData *imageData = UIImageJPEGRepresentation(_image_head.image, 1.0);
+        [formData appendPartWithFileData:imageData name:@"File" fileName:@"headImage" mimeType:@"image/jpeg"];
+        } progress:^(NSProgress * _Nonnull uploadProgress) {
+    } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject)
+     {
+         _HUD.hidden = YES;
+         if ([responseObject isKindOfClass:[NSDictionary class]]) {
+             if ([[responseObject objectForKey:@"code"] integerValue] == 10000) {
+                 NSDictionary *dicforImage = [[NSDictionary alloc]init];
+                 dicforImage = responseObject[@"value"];
+                 NSString *picFileName = dicforImage[@"picFileName"];
+                 
+                 NSUserDefaults *userDeaults = [NSUserDefaults standardUserDefaults];
+                 NSMutableDictionary *dic = [NSMutableDictionary dictionaryWithDictionary:[userDeaults objectForKey:@"DoctorDataDic"]];
+                 [dic setObject:picFileName forKey:@"picFileName"];
+                 [userDeaults setObject:dic forKey:@"DoctorDataDic"];
+                 [[NSUserDefaults standardUserDefaults]synchronize];
+                 [showAlertView showAlertViewWithMessage:@"头像设置成功"];
+             }else
+             {
+                 [showAlertView showAlertViewWithMessage:responseObject[@"message"]];
+             }
+         }
+
+     } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+         _HUD.hidden = YES;
+         [showAlertView showAlertViewWithMessage:@"头像设置失败"];
+
+     }];
+}
+
+#pragma mark - 时间选择器点击事件
+-(void)pickViewShow
+{
+    [self.view endEditing:YES];
+    [_basePicker datePickerShow:[NSDate date] MinDate:nil];
+    
+    NSString *borth = _lbl_borthData.text;
+    NSDateFormatter *dateborthDate = [[NSDateFormatter alloc]init];
+    [dateborthDate setDateFormat:@"yyyy-MM-dd"];
+    NSDate *date = [dateborthDate dateFromString:borth];
+    [_basePicker dateSetDate:date];
+}
+
+-(void)setDateFromDatePicker:(NSDate *)date
+{
+    NSDateFormatter *formatter = [[NSDateFormatter alloc]init];
+    [formatter setDateFormat:@"yyyy-MM-dd"];
+    [self sentBorthDay:[formatter stringFromDate:date]];
+}
+
+#pragma mark - 时间修改
+-(void)sentBorthDay:(NSString *)dateTime
+{
+    NSUserDefaults *userDefaults=[NSUserDefaults standardUserDefaults];
+    //获取用户秘钥
+    NSString *verifyCode=[userDefaults objectForKey:@"verifyCode"];
+    //获取登录医生数据字典
+    NSMutableDictionary *userDic=[NSMutableDictionary new];
+    userDic=[userDefaults objectForKey:@"DoctorDataDic"];
+    //POST
+    //HEAD
+    NSDictionary *heads=@{RESPONSE_KEY_VERIFYCODE:verifyCode};
+    //BODY
+    NSMutableDictionary *parameters=[[NSMutableDictionary alloc]init];
+    [parameters setObject:userDic[@"loginid"] forKey:@"loginid"];
+    [parameters setObject:dateTime forKey:@"birthDay"];
+    [RequestManager postWithURLString:DOCTORSETTINGDATAFORSELF heads:heads parameters:parameters success:^(id responseObject)
+     {
+         NSUserDefaults *userDeaults = [NSUserDefaults standardUserDefaults];
+         NSMutableDictionary *dic = [NSMutableDictionary dictionaryWithDictionary:[userDeaults objectForKey:@"DoctorDataDic"]];
+         if (dateTime) {
+             [dic setObject:dateTime forKey:@"birthDay"];
+         }
+         [userDeaults setObject:dic forKey:@"DoctorDataDic"];
+         [[NSUserDefaults standardUserDefaults]synchronize];
+         _lbl_borthData.text = dateTime;
+        [showAlertView showAlertViewWithMessage:@"修改成功"];
+         
+    } failure:^(NSError *error)
+    {
+        NSLog(@"错误 = %@",error);
+
+    }];
+}
+
+-(void)dealloc
+{
+    //移除当前的通知对象
+    [[NSNotificationCenter defaultCenter]removeObserver:self name:@"setImageForHead" object:self];
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+
+
+@end

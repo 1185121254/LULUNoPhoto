@@ -1,0 +1,322 @@
+//
+//  NewCaseScrollViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/8/10.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "NewCaseScrollViewController.h"
+
+#import "TZImagePickerController.h"
+#import "ShowPic.h"
+#import "ShowPicCollectionViewCell.h"
+
+@interface NewCaseScrollViewController ()<TZImagePickerControllerDelegate>
+{
+    //图片数组
+    NSMutableArray *_arryImage;
+    NSMutableArray *_arryPhonoes;
+    //图片列表
+    ShowPic *_picList;
+
+    
+}
+@end
+
+@implementation NewCaseScrollViewController
+
+-(void)dealloc{
+    [[NSNotificationCenter defaultCenter]removeObserver:self];
+}
+
+-(void)viewDidAppear:(BOOL)animated{
+    [super viewDidAppear:animated];
+    [self refreshLayout];
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.automaticallyAdjustsScrollViewInsets = NO;
+    self.scrolVIewNew.backgroundColor = [UIColor colorWithRed:230/255.0 green:230/255.0 blue:230/255.0 alpha:1];
+    
+    UIBarButtonItem *itrmRight = [[UIBarButtonItem alloc]initWithTitle:@"提交" style:UIBarButtonItemStylePlain target:self action:@selector(onAddDocCommit)];
+    self.navigationItem.rightBarButtonItem = itrmRight;
+    
+    self.title = @"新增病历";
+    self.patientName.text = self.model.name;
+    self.patientAge.text = [NSString stringWithFormat:@"%@岁",self.model.age];
+
+    //图片列表
+    _arryImage = [NSMutableArray array];
+    [self setImage];
+
+    //添加图片
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(onNotifyCAsePicAddDoc:) name:@"addPic" object:nil];
+    //删除图片
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(onDeletePic:) name:@"picDelete" object:nil];
+}
+
+#pragma mark----------------  创建图片
+-(void)setImage{
+    NSInteger count = kWith/kItemWidth;
+    NSInteger reste = (NSInteger)kWith % kItemWidth;
+    float gap = reste/(count + 1);
+    if ((_arryImage.count+1) % count == 0) {
+        _picHeight.constant = (kItemWidth+gap)*((_arryImage.count+1)/count)+4*gap;
+    }else
+    {
+        _picHeight.constant = (kItemWidth+gap)*((_arryImage.count+1)/count) + kItemWidth+gap*4;
+    }
+    UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc]init];
+    layout.sectionInset = UIEdgeInsetsMake(gap, gap, gap, gap);
+    layout.minimumLineSpacing = gap;
+    layout.minimumInteritemSpacing = gap;
+    layout.itemSize = CGSizeMake(kItemWidth, kItemWidth);
+    
+    _picList = [[ShowPic alloc]initWithFrame:CGRectMake(0, 0, _picView.frame.size.width, _picHeight.constant) collectionViewLayout:layout];
+    _picList.arryData = _arryImage;
+    _picList.from = @"pic";
+    [_picView addSubview:_picList];
+}
+#pragma mark----------------  更新图片
+-(void)updatePicList:(NSMutableArray *)arry{
+    NSInteger count = kWith/kItemWidth;
+    NSInteger reste = (NSInteger)kWith % kItemWidth;
+    float gap = reste/(count + 1);
+    if ((arry.count+1) % count == 0) {
+        _picHeight.constant = (kItemWidth+gap)*((arry.count+1)/count)+4*gap;
+    }else
+    {
+        _picHeight.constant = (kItemWidth+gap)*((arry.count+1)/count) + kItemWidth+gap*4;
+    }
+    _picList.frame = CGRectMake(0, 0, _picView.frame.size.width, _picHeight.constant);
+    [_picList refreshCollection:arry];
+    [self refreshLayout];
+}
+
+#pragma mark --------选择图片
+-(void)onNotifyCAsePicAddDoc:(NSNotification *)notify
+{
+    if (_arryImage.count>=9) {
+        kAlter(@"不能超过九张图片");
+        return;
+    }
+    TZImagePickerController *imagePickerVc = [[TZImagePickerController alloc] initWithMaxImagesCount:9 delegate:self];
+    imagePickerVc.allowPickingVideo = NO;
+    imagePickerVc.allowPickingOriginalPhoto = NO;
+    imagePickerVc.selectedAssets = _arryPhonoes;
+    [imagePickerVc setDidFinishPickingPhotosHandle:^(NSArray<UIImage *> *photos, NSArray *assets, BOOL isSelectOriginalPhoto)
+     {
+         _arryPhonoes = [NSMutableArray arrayWithArray:assets];
+         _arryImage = [NSMutableArray arrayWithArray:photos];
+         [self updatePicList:_arryImage];
+     }];
+    
+    [self presentViewController:imagePickerVc animated:YES completion:nil];
+}
+
+#pragma mark--------------------删除图片
+-(void)onDeletePic:(NSNotification *)notify{
+    ShowPicCollectionViewCell *cell = notify.object;
+    NSIndexPath *index = [_picList indexPathForCell:cell];
+    [_arryImage removeObjectAtIndex:index.item];
+    [_arryPhonoes removeObjectAtIndex:index.item];
+    [self updatePicList:_arryImage];
+}
+
+#pragma mark-----------提交
+-(void)onAddDocCommit{
+    [self.view endEditing:YES];
+    if (self.diagnoseTextView.text==nil||[self.diagnoseTextView.text isEqualToString:@""]) {
+        kAlter(@"疾病诊断为空");
+        return;
+    }
+    if (self.despTextView.text==nil||[self.despTextView.text isEqualToString:@""]) {
+        kAlter(@"症状描述为空");
+        return;
+    }
+
+    NSMutableDictionary *dicData = [[NSMutableDictionary alloc]init];
+    [dicData setObject:[kUserDefatuel objectForKey:@"id"] forKey:@"doctorId"];
+    [dicData setObject:self.model.Id forKey:@"patientId"];
+    [dicData setObject:self.diagnoseTextView.text forKey :@"result"];
+    [dicData setObject:self.despTextView.text forKey:@"description"];
+    [dicData setObject:self.drugTextView.text forKey:@"drugList"];
+    [dicData setObject:self.checkTextView.text forKey:@"checkList"];
+    
+    UIAlertController *alter = [UIAlertController alertControllerWithTitle:@"提示" message:@"确定要提交新的病历" preferredStyle:UIAlertControllerStyleAlert];
+    [alter addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        //13559243607
+        if (_arryImage.count != 0) {
+            NSMutableArray *arryData  =[NSMutableArray array];
+            for (UIImage *image in _arryImage) {
+                NSData *data = UIImageJPEGRepresentation(image, 1);
+                [arryData addObject:data];
+            }
+            NSDictionary *header = @{@"verifyCode":[kUserDefatuel objectForKey:@"verifyCode"]};
+
+            
+            [RequestManager CasePicWithURLString:[NSString stringWithFormat:@"%@/api/Share/PictureUpload",NET_URLSTRING] heads:header Parameters:arryData  viewConroller:self Complation:^(NSDictionary *dicCom) {
+                if ([[dicCom objectForKey:@"code"] integerValue]==10000) {
+                    [dicData setObject:[dicCom objectForKey:@"value"] forKey:@"picList"];
+                    [self NoPic:dicData];
+                }
+                else
+                {
+
+                    kAlter(@"上传图片失败");
+                }
+            } Fail:^(NSError *error) {
+
+                kAlter(@"上传图片失败");
+            }];
+            [dicData setObject:_arryImage forKey:@"picList"];
+        }else
+        {
+            [self NoPic:dicData];
+        }
+    }]];
+    [alter addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+    [self presentViewController:alter animated:YES completion:nil];
+}
+
+-(void)NoPic:(NSMutableDictionary *)dicData{
+    [RequestManager postWithURLStringALL:[NSString stringWithFormat:@"%@/api/Doctor/NewMedicalRecordAdd",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:dicData viewConroller:self success:^(id responseObject, BOOL ifTimeout) {
+
+        
+        UIAlertController *alter = [UIAlertController alertControllerWithTitle:@"提示" message:@"您已提交成功！！" preferredStyle:UIAlertControllerStyleAlert];
+        [alter addAction:[UIAlertAction actionWithTitle:@"我知道了" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            [self.navigationController popViewControllerAnimated:YES];
+        }]];
+        [self presentViewController:alter animated:YES completion:nil];
+    } failure:^(NSError *error) {
+
+    }];
+}
+
+#pragma mark--------------------TextViewDelegate
+- (void)textViewDidChange:(UITextView *)textView{
+    
+    if (textView.tag == 911) {
+        self.diagnosePlacor.hidden = [self textViewLength:textView];
+        if ([self textViewTextOutStr:textView length:50]) {
+            kAlter(@"疾病诊断不能超出50个字符");
+        }
+        self.diagnoseHeight.constant = [self textViewheight:textView];
+    }
+    else if(textView.tag == 912){
+        self.despPlacor.hidden = [self textViewLength:textView];
+        if ([self textViewTextOutStr:textView length:50]) {
+            kAlter(@"症状描述断不能超出50个字符");
+        }
+        if ([self textViewheight:textView]+30<110) {
+            self.despHeight.constant = 110;
+        }else
+        {
+            self.despHeight.constant = [self textViewheight:textView]+30;
+        }
+    }
+    else if(textView.tag == 913){
+        self.checkPlacor.hidden = [self textViewLength:textView];
+        if ([self textViewTextOutStr:textView length:100]) {
+            kAlter(@"检查项目不能超出100个字符");
+        }
+        self.checkHeight.constant = [self textViewheight:textView]+31;
+    }
+    else if(textView.tag == 914){
+        self.drugPlacor.hidden = [self textViewLength:textView];
+        if ([self textViewTextOutStr:textView length:100]) {
+            kAlter(@"用药记录不能超出100个字符");
+        }
+        self.drugHeight.constant = [self textViewheight:textView]+31;
+    }
+    [self refreshLayout];
+}
+
+- (void)textViewDidBeginEditing:(UITextView *)textView{
+    
+    if (textView.tag == 911) {
+        self.diagnosePlacor.hidden = YES;
+    }
+    else if (textView.tag == 912){
+        self.despPlacor.hidden = YES;
+    }
+    else if (textView.tag == 913){
+        self.checkPlacor.hidden = YES;
+    }
+    else if (textView.tag == 914){
+        self.drugPlacor.hidden = YES;
+    }
+}
+
+- (void)textViewDidEndEditing:(UITextView *)textView{
+    
+    if (textView.tag == 911) {
+        self.diagnosePlacor.hidden = [self textViewLength:textView];
+    }
+    else if (textView.tag == 912){
+        self.despPlacor.hidden = [self textViewLength:textView];
+    }
+    else if (textView.tag == 913){
+        self.checkPlacor.hidden = [self textViewLength:textView];
+    }
+    else if (textView.tag == 914){
+        self.drugPlacor.hidden = [self textViewLength:textView];
+    }
+}
+
+-(BOOL)textViewTextOutStr:(UITextView *)textView length:(NSInteger)legth{
+    
+    if (textView.text.length>legth) {
+        NSString *outLength = [textView.text substringWithRange:NSMakeRange(legth, textView.text.length-legth)];
+        textView.text =  [textView.text stringByReplacingOccurrencesOfString:outLength withString:@""];
+        return YES;
+    }
+    return NO;
+}
+
+-(BOOL)textViewLength:(UITextView *)textView{
+    if (textView.text.length==0) {
+        return NO;
+    }
+    return YES;
+}
+
+-(CGFloat)textViewheight:(UITextView *)textView{
+    CGRect rect = textView.bounds;
+    CGSize maxSize = CGSizeMake(rect.size.width, CGFLOAT_MAX);
+    CGSize newSize = [textView sizeThatFits:maxSize];
+    return newSize.height+1;
+}
+#pragma mark--------------------更新约束
+
+-(void)refreshLayout{
+    [self.view layoutIfNeeded];
+    
+    CGFloat height = self.patientHeigth.constant+self.diagnoseHeight.constant+self.despHeight.constant+self.picHeight.constant+self.checkHeight.constant+self.drugHeight.constant+10+3*8;
+    
+    if (height<+kHeight-64) {
+        height = kHeight-64+1;
+    }
+    
+    self.scrolVIewNew.contentSize = CGSizeMake(kWith, height);
+    
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

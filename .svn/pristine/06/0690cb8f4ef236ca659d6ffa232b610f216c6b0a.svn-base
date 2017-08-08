@@ -1,0 +1,131 @@
+//
+//  KockSettingPasswordViewController.m
+//  HuaxiaDotor
+//
+//  Created by kock on 16/5/17.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "KockSettingPasswordViewController.h"
+#import "KockPhoneNumberSettingViewController.h"
+#import "LoginViewController.h"
+
+@interface KockSettingPasswordViewController ()
+
+
+@property (weak, nonatomic) IBOutlet UIButton *btn_next;
+@property (weak, nonatomic) IBOutlet UITextField *txt_oldMassage;
+@property (weak, nonatomic) IBOutlet UITextField *txt_password;
+@property (weak, nonatomic) IBOutlet UITextField *txt_againPassword;
+
+@property (nonatomic,copy)NSString *oldPassWord;
+
+@end
+
+@implementation KockSettingPasswordViewController
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+   
+    _btn_next.layer.cornerRadius = 3;
+    _btn_next.layer.masksToBounds = YES;
+    
+    NSDictionary *dic =  [kUserDefatuel objectForKey:@"DoctorDataDic"];
+    _oldPassWord = [dic objectForKey:@"password"];
+    self.view.backgroundColor = [UIColor colorWithWhite:1.000 alpha:0.950];
+    
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+#pragma mark - 下一步
+- (IBAction)btnNextAction:(UIButton *)sender
+{    
+    if ([_txt_oldMassage.text isEqualToString:@""]) {
+        kAlter(@"请输入原密码");
+    }
+    else if ([_txt_password.text isEqualToString:@""]){
+        kAlter(@"请输入新密码");
+    }
+    else if ([_txt_againPassword.text isEqualToString:@""]){
+        kAlter(@"请再次输入新密码");
+    }
+    else if (![_txt_oldMassage.text isEqualToString:_oldPassWord]){
+        kAlter(@"原密码有误，请重新输入");
+    }
+    else if (_txt_againPassword.text.length < 6 || _txt_password.text.length < 6){
+        kAlter(@"新密码不能少于六位");
+    }
+    else if (![_txt_password.text isEqualToString:_txt_againPassword.text]){
+        kAlter(@"新密码前后输入不一致，请重新输入");
+    }else
+    {
+        //提交修改
+        [self setingPassword];
+    }
+}
+
+#pragma mark - 发送密码设置请求
+-(void)setingPassword
+{
+    NSUserDefaults *userDefaults=[NSUserDefaults standardUserDefaults];
+    //获取用户秘钥
+    NSString *verifyCode;
+    verifyCode=[userDefaults objectForKey:@"verifyCode"];
+    NSString *userID;
+    userID = [userDefaults objectForKey:@"id"];
+    
+    //HEAD
+    NSDictionary *heads=@{RESPONSE_KEY_VERIFYCODE:verifyCode};
+    
+    //BODY
+    NSMutableDictionary *parameters=[[NSMutableDictionary alloc]init];
+    
+    [parameters setObject:userID forKey:@"doctorId"];
+    
+    [parameters setObject:_txt_oldMassage.text forKey:@"oldpassword"];
+    
+    [parameters setObject:_txt_againPassword.text forKey:@"password"];
+    
+    //获取需要上传的数据
+    //GET
+    [RequestManager getWithURLString:REPASSWORD heads:heads parameters:parameters success:^(id responseObject)
+     {
+         if ([responseObject[@"code"] integerValue]==-10000)
+         {
+             [showAlertView showAlertViewWithMessage:[NSString stringWithFormat:@"%@",responseObject[@"message"]]];
+         }
+         else if ([responseObject[@"code"] integerValue]==10000)
+         {
+             [self setAltetPresent];
+         }
+
+     } failure:^(NSError *error)
+     {
+         NSLog(@"ERROR%@",error);
+     }];
+}
+
+-(void)setAltetPresent{
+
+    
+    UIAlertController *alter = [UIAlertController alertControllerWithTitle:@"提示" message:@"验证通过,恭喜您密码修改成功" preferredStyle:UIAlertControllerStyleAlert];
+    [alter addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        
+        UIStoryboard *log=[UIStoryboard storyboardWithName:@" LoginView" bundle:[NSBundle mainBundle]];
+        LoginViewController *login=[log instantiateViewControllerWithIdentifier:@"LoginView"];
+        login.from = @"exit";
+        [self.navigationController pushViewController:login animated:YES];
+        
+    }]];
+    [self presentViewController:alter animated:YES completion:nil];
+    
+}
+
+
+@end

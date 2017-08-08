@@ -1,0 +1,75 @@
+//
+//  IDNumberViewController.m
+//  HuaxiaDotor
+//
+//  Created by kock on 16/5/23.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "IDNumberViewController.h"
+
+@interface IDNumberViewController ()
+@property (weak, nonatomic) IBOutlet UITextField *txt_IDNum;
+
+@end
+
+@implementation IDNumberViewController
+
+-(void)viewWillAppear:(BOOL)animated
+{
+    [_txt_IDNum becomeFirstResponder];
+    self.view.backgroundColor = [UIColor whiteColor];
+    _txt_IDNum.text = _str_id;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+}
+- (IBAction)btnEnter:(UIBarButtonItem *)sender
+{
+    
+    if (_txt_IDNum.text.length == 18 || _txt_IDNum.text.length == 15) {
+        NSString *regex2 = @"^(\\d{14}|\\d{17})(\\d|[xX])$";;
+        NSPredicate *identityCardPredicate = [NSPredicate predicateWithFormat:@"SELF MATCHES %@",regex2];
+        if (![identityCardPredicate evaluateWithObject:_txt_IDNum.text]) {
+            kAlter(@"身份证格式错误");
+            return;
+        }else
+        {
+            [self userDeafault:_txt_IDNum.text];
+        }
+    }else
+    {
+        [self userDeafault:@""];
+    }
+    
+}
+
+-(void)userDeafault:(NSString *)IdCard{
+    NSUserDefaults *userDeaults = [NSUserDefaults standardUserDefaults];
+    NSMutableDictionary *userDic=[NSMutableDictionary new];
+    userDic = [userDeaults objectForKey:@"DoctorDataDic"];
+    userDic = [NSMutableDictionary dictionaryWithDictionary:userDic];
+    [userDic setObject:IdCard forKey:@"idCard"];
+    [userDeaults setObject:userDic forKey:@"DoctorDataDic"];
+    [[NSUserDefaults standardUserDefaults]synchronize];
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

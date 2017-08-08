@@ -1,0 +1,78 @@
+//
+//  NSString+CellTxtHeight.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/7/26.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "NSString+CellTxtHeight.h"
+
+@implementation NSString (CellTxtHeight)
+
++(CGFloat)cellHeight:(NSString *)text{
+    CGRect rect = [text boundingRectWithSize:CGSizeMake(kWith - 40, 1000) options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName:[UIFont systemFontOfSize:15]} context:nil];
+    return rect.size.height+20;
+}
+
+#pragma mark--------升序有model类
++(NSArray *)shengXuPatientConC:(NSArray *)arry{
+    NSDateFormatter *dateFormatter = [NSDateFormatter new];
+    dateFormatter.dateFormat = @"yyyy/MM/dd HH:mm:ss";
+    
+    NSArray * array = [arry sortedArrayUsingComparator:^NSComparisonResult(PatientModel *modelM1, PatientModel *modelM2) {
+        
+        NSDate *date1 = [dateFormatter dateFromString:modelM1.latestDate];
+        NSDate *date2 = [dateFormatter dateFromString:modelM2.latestDate];
+        NSComparisonResult result = [date1 compare:date2];
+        return result == NSOrderedAscending;
+    }];
+    return array;
+}
+
+
+#pragma mark--------富文本
++(NSAttributedString *)richTextOldStr:(NSString *)oldText SeparatedByString:(NSString *)sepStr strUnit:(NSInteger)wave textFont:(UIFont *)font textForgColor:(UIColor *)color{
+
+    NSArray *arry = [oldText componentsSeparatedByString:sepStr];
+    NSString *strUnit = arry[wave];
+    
+    NSMutableAttributedString *attributeStr = [[NSMutableAttributedString alloc] initWithString:oldText];
+   
+    [attributeStr addAttributes:@{NSFontAttributeName:font,NSForegroundColorAttributeName:color} range:[oldText rangeOfString:strUnit]];
+    
+    return attributeStr;
+}
+
+#pragma mark--------下载路径
++(NSURL *)downLoadFile:(NSString *)patientName FileNmae:(NSString *)title{
+
+    
+    BOOL isDir;
+    if (![[NSFileManager defaultManager] fileExistsAtPath:[NSHomeDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Documents/%@",patientName]] isDirectory:& isDir]) {
+        
+        BOOL creaatSuccess = [[NSFileManager defaultManager] createDirectoryAtPath:[NSHomeDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Documents/%@",patientName]] withIntermediateDirectories:YES attributes:nil error:nil];
+        if (creaatSuccess) {
+            NSString *filePath =[NSHomeDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Documents/%@/%@.docx",patientName,title]];
+            NSLog(@"--------%@",filePath);
+            
+            NSURL*urlFile = [NSURL fileURLWithPath:filePath];
+            return urlFile;
+        }else
+        {
+            NSLog(@"创建文件夹失败");
+            return 0;
+        }
+        
+    }else
+    {
+        NSString *filePath =[NSHomeDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Documents/%@/%@.docx",patientName,title]];
+        NSLog(@"--------%@",filePath);
+        
+        NSURL*urlFile = [NSURL fileURLWithPath:filePath];
+        return urlFile;
+    }
+
+}
+
+@end

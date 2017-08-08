@@ -1,0 +1,403 @@
+//
+//  AddressTableViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/6/15.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "AddressTableViewController.h"
+#import "AddressTableViewCell.h"
+#import "GroupModel.h"
+#import "GroupDetailModel.h"
+#import "PatientReportChatViewController.h"
+#import "AddressTestViewController.h"
+#import "KockDoctorApproveViewController.h"
+
+@interface AddressTableViewController ()<UITableViewDelegate,UITableViewDataSource>
+{
+    UITableView *_tableAddress;
+    NSMutableArray *_arryDataSource;
+    NSMutableArray *_arryState;
+}
+@end
+
+@implementation AddressTableViewController
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    
+    _arryState = [NSMutableArray array];
+    MBProgressHUD *HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    HUD.mode = MBProgressHUDModeIndeterminate;
+    HUD.labelText = @"正在加载";
+    HUD.hidden = NO;
+
+    if ([self.state isEqualToString:@"0"]) {
+        NSDictionary *dic = [NSDictionary dictionaryWithObjectsAndKeys:[kUserDefatuel objectForKey:@"id"],@"doctorId",@"",@"doctorName", nil];
+        [RequestManager moneyTotalListType:[NSString stringWithFormat:@"%@/api/Circle/CircleFriendListFind",NET_URLSTRING] Parameters:dic Complation:^(NSMutableArray *arry) {
+            HUD.hidden = YES;
+            if (arry == nil || arry.count == 0) {
+                self.noData.hidden = NO;
+            }else
+            {
+                self.noData.hidden = YES;
+                NSMutableArray *arryNew = [NSMutableArray array];
+                for (NSDictionary *dicNew in arry) {
+                    if ([dicNew objectForKey:@"userName"]!=nil) {
+                        [arryNew addObject:dicNew];
+                    }
+                }
+                _arryDataSource = arryNew;
+            }
+            [_tableAddress reloadData];
+        } Fail:^(NSError *error) {
+            HUD.hidden = YES;
+            kAlter(kFail);
+        }];
+    }else
+    {
+        NSDictionary *dicLog = [kUserDefatuel objectForKey:@"DoctorDataDic"];
+        if ([[dicLog objectForKey:@"state"] integerValue] == 2) {
+            NSDictionary *dic = [NSDictionary dictionary];
+            [RequestManager getGroupListClip:[NSString stringWithFormat:@"%@/api/Doctor/GetHosAddressBookDept",NET_URLSTRING] Parameters:dic Complation:^(NSMutableArray *arry) {
+                HUD.hidden = YES;
+                if (arry == nil || arry.count == 0) {
+                    self.noData.hidden = NO;
+                }else
+                {
+                    self.noData.hidden = YES;
+                }
+                _arryDataSource = arry;
+                for (NSInteger i = 0; i<_arryDataSource.count; i++) {
+                    [_arryState addObject:@"hidden"];
+                }
+                [_tableAddress reloadData];
+            } Fail:^(NSError *error) {
+                HUD.hidden = YES;
+                kAlter(kFail);
+            }];
+        }else
+        {
+            HUD.hidden = YES;
+            _tableAddress.hidden = YES;
+            float y;
+            if (kHeight == 480) {
+                y = 10;
+            }else
+            {
+                y = 50;
+            }
+            UIImageView *imageSign = [[UIImageView alloc]initWithFrame:CGRectMake((kWith-160)/2, y, 160, 160)];
+            imageSign.image = [UIImage imageNamed:@"感叹号"];
+            [self.view addSubview:imageSign];
+            
+            UILabel *lblText = [[UILabel alloc]initWithFrame:CGRectMake(10, imageSign.frame.origin.y+imageSign.frame.size.height+10, kWith - 20, 80)];
+            lblText.textColor = kBoradColor;
+            lblText.numberOfLines = 0;
+            lblText.textAlignment = 1;
+            lblText.font = [UIFont systemFontOfSize:16];
+            lblText.attributedText = [self setNameTextLableSign:@"无法查看\n对不起，您尚未完成验证，暂时无法查看您所在医院的的通讯录!"];
+            [self.view addSubview:lblText];
+            
+            UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+            btn.frame = CGRectMake(20, lblText.frame.origin.y+lblText.frame.size.height, kWith-40, 40);
+            btn.backgroundColor = BLUECOLOR_STYLE;
+            btn.layer.cornerRadius = 4;
+            btn.layer.masksToBounds = YES;
+            [btn setTitle:@"去认证" forState:UIControlStateNormal];
+            [btn addTarget:self action:@selector(onBTnToCertificate) forControlEvents:UIControlEventTouchUpInside];
+            [self.view addSubview:btn];
+            
+        }
+    }
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+
+    self.automaticallyAdjustsScrollViewInsets = NO;
+    self.view.frame = CGRectMake(0, 0, kWith, kHeight-110-43-2);
+    _tableAddress =[[UITableView alloc]initWithFrame:self.view.frame style:UITableViewStyleGrouped];
+    _tableAddress.dataSource = self;
+    _tableAddress.backgroundColor = [UIColor clearColor];
+    _tableAddress.delegate = self;
+    _tableAddress.rowHeight = 71;
+    [self.view addSubview:_tableAddress];
+
+    [_tableAddress registerClass:[AddressTableViewCell class] forCellReuseIdentifier:@"addressTable"];
+    
+    
+}
+
+-(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    if ([self.state isEqualToString:@"0"]) {
+        return 1;
+    }
+    return _arryDataSource.count;
+}
+
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    if ([self.state isEqualToString:@"0"]) {
+        return _arryDataSource.count;
+    }else
+    {
+        GroupModel *model = _arryDataSource[section];
+        NSString *state = _arryState[section];
+        if ([state isEqualToString:@"hidden"]) {
+            return 0;
+        }else{
+            return model.groupDetail.count;
+        }
+    }
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 40;
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    return 3;
+}
+
+-(UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+
+    UIView *viewB = [[UIView alloc]initWithFrame:CGRectMake(0, 0, kWith, 40)];
+    
+    UILabel *lbl = [[UILabel alloc]initWithFrame:CGRectMake(30, 0, 150, 40)];
+    lbl.font = [UIFont systemFontOfSize:15];
+    [viewB addSubview:lbl];
+    
+    UIButton *btnAddNewFried = [UIButton buttonWithType:UIButtonTypeCustom];
+    [btnAddNewFried addTarget:self action:@selector(addAddressNewFriends) forControlEvents:UIControlEventTouchUpInside];
+    btnAddNewFried.frame = CGRectMake(kWith - 70, 0, 60, 40);
+    btnAddNewFried.titleLabel.textAlignment= 2;
+    [viewB addSubview:btnAddNewFried];
+    
+    UIImageView *image = [[UIImageView alloc]initWithFrame:CGRectMake(7, 15, 15, 7)];
+    [viewB addSubview:image];
+    
+    UIControl  *control = [[UIControl alloc]initWithFrame:CGRectMake(0, 0, kWith, 30)];
+    control.tag = 4100+section;
+    [control addTarget:self action:@selector(onControllAddress:) forControlEvents:UIControlEventTouchUpInside];
+    [viewB addSubview:control];
+    
+    if ([self.state isEqualToString:@"0"]) {
+        lbl.text = [NSString stringWithFormat:@"所有联系人  %ld",(unsigned long)_arryDataSource.count];
+        [btnAddNewFried setTitle:@"新的好友" forState:UIControlStateNormal];
+        [btnAddNewFried setTitleColor:BLUECOLOR_STYLE forState:UIControlStateNormal];
+        btnAddNewFried.titleLabel.font = [UIFont systemFontOfSize:15];
+        btnAddNewFried.userInteractionEnabled = YES;
+        control.userInteractionEnabled = NO;
+        viewB.backgroundColor = kBackgroundColor;
+    }else
+    {
+        viewB.backgroundColor = [UIColor whiteColor];
+        NSString *str = _arryState[section];
+        if ([str isEqualToString:@"hidden"]) {
+            image.image = [UIImage imageNamed:@"arrow_up_gray"];
+        }else
+        {
+            image.image = [UIImage imageNamed:@"arrow_down_gray"];
+        }
+        GroupModel *group = _arryDataSource[section];
+        lbl.text = group.departName;;
+        btnAddNewFried.userInteractionEnabled = NO;
+        if ([group.count integerValue] != 0) {
+            [btnAddNewFried setTitle:group.count forState:UIControlStateNormal];
+        }
+        [btnAddNewFried setTitleColor:[[UIColor grayColor] colorWithAlphaComponent:0.5] forState:UIControlStateNormal];
+        control.userInteractionEnabled = YES;
+    }
+    return viewB;
+}
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+
+    AddressTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"addressTable" forIndexPath:indexPath];
+    if ([self.state isEqualToString:@"0"]) {
+        NSDictionary *dic           = _arryDataSource[indexPath.row];
+        NSString *licenseTitle;
+        NSString *licenseHospital;
+        NSString *speciality;
+        if ([dic objectForKey:@"licenseTitle"] == nil) {
+            licenseTitle  =@"";
+        }else
+        {
+        licenseTitle                = [dic objectForKey:@"licenseTitle"];
+        }
+        if ([dic objectForKey:@"licenseHospital"]==nil) {
+        licenseHospital             = @"";
+        }else
+        {
+        licenseHospital             = [dic objectForKey:@"licenseHospital"];
+        }
+        if ([dic objectForKey:@"speciality"] == nil) {
+        speciality                  = @"";
+        }else
+        {
+        speciality                  = [dic objectForKey:@"speciality"];
+        }
+        NSString *uyl               = [NSString stringWithFormat:@"%@%@",NET_URLSTRING,[dic objectForKey:@"picFileName"]];
+        NSString *url               = [uyl stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+        [cell.imageAvater sd_setImageWithURL:[NSURL URLWithString:url] placeholderImage:[UIImage imageNamed:@"ic_login_account"]];
+        cell.lblName.attributedText = [self setNameTextAddress:[NSString stringWithFormat:@"%@    %@",[dic objectForKey:@"userName"],licenseTitle]];
+        cell.lblIllness.text        = [NSString stringWithFormat:@"%@ | %@",licenseHospital,speciality];
+        if ([[dic objectForKey:@"newMessage"] integerValue]==0) {
+        cell.lblNewMeg.hidden       = YES;
+        }else
+        {
+        cell.lblNewMeg.hidden       = NO;
+        }
+    }else
+    {
+        GroupModel *model = _arryDataSource[indexPath.section];
+        GroupDetailModel *detail = model.groupDetail[indexPath.row];
+        [cell.imageAvater sd_setImageWithURL:[NSURL URLWithString:[NSString stringWithFormat:@"%@%@",NET_URLSTRING,detail.picFileName]] placeholderImage:[UIImage imageNamed:@"ic_login_account"]];
+        cell.lblName.text = detail.doctorName;
+        cell.lblIllness.text = detail.doctorPhone;
+        cell.lblNewMeg.hidden = YES;
+
+    }
+
+    return cell;
+}
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    
+    if ([self.state isEqualToString:@"0"]) {
+        PatientReportChatViewController *patie = [[PatientReportChatViewController alloc]init];
+        NSDictionary *dic = _arryDataSource[indexPath.row];
+        patie.patientDoc = dic;
+        patie.from = @"address";
+        [self.navigationController pushViewController:patie animated:YES];
+    }
+}
+
+-(BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath{
+    if ([self.state isEqualToString:@"0"]) {
+        return YES;
+    }
+    return NO;
+}
+
+-(void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath{
+    if ([self.state isEqualToString:@"0"]) {
+        UIAlertController *alter = [UIAlertController alertControllerWithTitle:@"提示" message:@"您确定要删除该好友吗？" preferredStyle:UIAlertControllerStyleAlert];
+        [alter addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            [self deletefeined:indexPath];
+        }]];
+        [alter addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+        [self presentViewController:alter animated:YES completion:nil];
+    }
+}
+
+-(void)deletefeined:(NSIndexPath *)index{
+
+    NSDictionary *dicData = _arryDataSource[index.row];
+    NSDictionary *dic = @{@"friendId":[dicData objectForKey:@"friendId"],@"doctorId":[kUserDefatuel objectForKey:@"id"]};
+    [RequestManager CloseOnLine:[NSString stringWithFormat:@"%@/api/Circle/CircleFriendDelete",NET_URLSTRING] Parameters:dic Complation:^(NSNumber *code) {
+        if ([code integerValue] == 10000) {
+            [_arryDataSource removeObjectAtIndex:index.row];
+            [_tableAddress deleteRowsAtIndexPaths:@[index] withRowAnimation:YES];
+        }else{
+            kAlter(@"操作失败");
+        }
+
+    } Fail:^(NSError *error) {
+        kAlter(@"操作失败");
+    }];
+    
+}
+
+#pragma mark ---------- 折合表
+-(void)onControllAddress:(UIControl *)control{
+
+    NSString *str = _arryState[control.tag - 4100];
+    if ([str isEqualToString:@"hidden"]) {
+        [_arryState replaceObjectAtIndex:control.tag - 4100 withObject:@"show"];
+        GroupModel *model = _arryDataSource[control.tag - 4100];
+        NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+        [dic setObject:model.departId forKey:@"deptid"];
+        MBProgressHUD *HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+        HUD.mode = MBProgressHUDModeIndeterminate;
+        HUD.labelText = @"正在加载";
+        HUD.hidden = NO;
+        [RequestManager getGroupAddressListClip:[NSString stringWithFormat:@"%@/api/Doctor/GetHosAddressBook",NET_URLSTRING] Parameters:dic Complation:^(NSMutableArray *arry) {
+            model.groupDetail = arry;
+            NSIndexSet *set = [NSIndexSet indexSetWithIndex:control.tag - 4100];
+            [_tableAddress reloadSections:set withRowAnimation:UITableViewRowAnimationFade];
+            HUD.hidden = YES;
+
+        } Fail:^(NSError *error) {
+            HUD.hidden = YES;
+            kAlter(kFail);
+        }];
+    }else
+    {
+        [_arryState replaceObjectAtIndex:control.tag - 4100 withObject:@"hidden"];
+        NSIndexSet *set = [NSIndexSet indexSetWithIndex:control.tag - 4100];
+        [_tableAddress reloadSections:set withRowAnimation:UITableViewRowAnimationFade];
+    }
+
+}
+
+#pragma mark ---------- 添加好友
+-(void)addAddressNewFriends{
+
+    AddressTestViewController *adress = [[AddressTestViewController alloc]init];
+    [self.navigationController pushViewController:adress animated:YES];
+    
+}
+
+#pragma mark ---------- 富文本
+//富文本
+-(NSMutableAttributedString *)setNameTextAddress:(NSString *)text{
+    
+    NSArray *arry = [text componentsSeparatedByString:@"    "];
+    NSString *strUnit = arry[1];
+    
+    NSMutableAttributedString *medStr = [[NSMutableAttributedString alloc]initWithString:text];
+    [medStr addAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:15],NSForegroundColorAttributeName:kBoradColor} range:[text rangeOfString:strUnit]];
+    return medStr;
+}
+
+-(NSMutableAttributedString *)setNameTextLableSign:(NSString *)text{
+    
+    NSArray *arry = [text componentsSeparatedByString:@"\n"];
+    NSString *strUnit = arry[1];
+    
+    NSMutableAttributedString *medStr = [[NSMutableAttributedString alloc]initWithString:text];
+    [medStr addAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:15]} range:[text rangeOfString:strUnit]];
+    return medStr;
+}
+
+#pragma mark------去认证
+-(void)onBTnToCertificate{
+    
+    //创建新增患者界面
+    UIStoryboard *storyboardName=[UIStoryboard storyboardWithName:@"PersonalStoryBoard" bundle:[NSBundle mainBundle]];
+    //指定对应的故事版
+    KockDoctorApproveViewController *newView=[storyboardName instantiateViewControllerWithIdentifier:@"Approvestory"];
+    newView.from = @"通讯录";
+    //推送
+    [self.navigationController pushViewController:newView animated:YES];
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

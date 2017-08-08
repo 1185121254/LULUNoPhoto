@@ -1,0 +1,280 @@
+//
+//  AcademicThatViewController.m
+//  HuaxiaDotor
+//
+//  Created by kock on 16/4/29.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "AcademicThatViewController.h"
+#import "ScienceView.h"
+#import "ConsultingView.h"
+#import "MeetingView.h"
+#import "NewsView.h"
+
+@interface AcademicThatViewController ()<UIScrollViewDelegate>
+//科普文章
+@property (weak, nonatomic) IBOutlet UIButton *btn_science;
+//眼科咨询
+@property (weak, nonatomic) IBOutlet UIButton *btn_Consulting;
+//学术会议
+@property (weak, nonatomic) IBOutlet UIButton *btn_Meeting;
+//业界新闻
+@property (weak, nonatomic) IBOutlet UIButton *btn_News;
+
+//四个tableView试图
+@property (strong, nonatomic)  ScienceView*viewForScientce;
+@property (strong, nonatomic)  ConsultingView*viewForConsulting;
+@property (strong, nonatomic)  MeetingView*viewForMeetiong;
+@property (strong, nonatomic)  NewsView *viewForNews;
+
+@property (strong, nonatomic) UIView *view_select1;
+@property (strong, nonatomic) UIView *view_select2;
+@property (strong, nonatomic) UIView *view_select3;
+@property (strong, nonatomic) UIView *view_select4;
+@property (strong, nonatomic) UIScrollView *scroller_Home;
+
+@end
+
+@implementation AcademicThatViewController
+
+-(void)viewWillAppear:(BOOL)animated
+{
+    self.navigationController.navigationBar.hidden = NO;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    self.view.backgroundColor = kBackgroundColor;
+    //添加按钮指示条
+    [self createSelect];
+    //创建scrollerview
+    [self createScrollerView];
+    //创建tableview
+    [self createTableview];
+}
+
+#pragma mark - 创建scrollerview
+-(void)createScrollerView
+{
+    _scroller_Home = [[UIScrollView alloc]initWithFrame:CGRectMake(0, 50+64, SCREEN_W, SCREEN_H-50-64)];
+    _scroller_Home.contentSize = CGSizeMake(SCREEN_W*4, SCREEN_H-50-64);
+    _scroller_Home.delegate = self;
+    _scroller_Home.pagingEnabled = YES;
+    _scroller_Home.bounces = YES;
+    _scroller_Home.showsHorizontalScrollIndicator = NO;
+    _scroller_Home.showsVerticalScrollIndicator = NO;
+    [self.view addSubview:_scroller_Home];
+}
+
+#pragma mark - 创建tableview
+-(void)createTableview
+{
+    //科普
+    _viewForScientce = [[ScienceView alloc]init];
+    _viewForScientce.view.frame = CGRectMake(0, 0, kWith, kHeight-64-50);
+    [_scroller_Home addSubview:_viewForScientce.view];
+    [self addChildViewController:_viewForScientce];
+    //眼科
+    _viewForConsulting = [[ConsultingView alloc]init];
+    _viewForConsulting.view.frame = CGRectMake(kWith, 0, kWith, kHeight-64-50);
+    [_scroller_Home addSubview:_viewForConsulting.view];
+    [self addChildViewController:_viewForConsulting];
+    //学术
+    _viewForMeetiong = [[MeetingView alloc]init];
+    _viewForMeetiong.view.frame = CGRectMake(kWith*2, 0, kWith, kHeight-64-54);
+    [_scroller_Home addSubview:_viewForMeetiong.view];
+    [self addChildViewController:_viewForMeetiong];
+    //业界
+    _viewForNews = [[NewsView alloc]init];
+    _viewForNews.view.frame = CGRectMake(kWith*3, 0, kWith, kHeight-64-50);
+    [_scroller_Home addSubview:_viewForNews.view];
+    [self addChildViewController:_viewForNews];
+    
+}
+
+#pragma mark - 监听scroller目前的位置
+-(void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
+{
+    //计算滚试图位置
+    int viewTag = [self calculateScrollPage];
+    if (viewTag==0)//科普
+    {
+        _view_select1.hidden = NO;
+        _view_select2.hidden = YES;
+        _view_select3.hidden = YES;
+        _view_select4.hidden = YES;
+        
+        _btn_science.selected = YES;
+        _btn_Consulting.selected = NO;
+        _btn_Meeting.selected = NO;
+        _btn_News.selected = NO;
+    }
+    if (viewTag==1)//眼科
+    {
+        _view_select2.hidden = NO;
+        _view_select1.hidden = YES;
+        _view_select3.hidden = YES;
+        _view_select4.hidden = YES;
+        
+        _btn_science.selected = NO;
+        _btn_Consulting.selected = YES;
+        _btn_Meeting.selected = NO;
+        _btn_News.selected = NO;
+    }
+    if (viewTag==2)//学术
+    {
+        _view_select3.hidden = NO;
+        _view_select2.hidden = YES;
+        _view_select1.hidden = YES;
+        _view_select4.hidden = YES;
+        
+        _btn_science.selected = NO;
+        _btn_Consulting.selected = NO;
+        _btn_Meeting.selected = YES;
+        _btn_News.selected = NO;
+    }
+    if (viewTag==3)//业界
+    {
+        _view_select4.hidden = NO;
+        _view_select2.hidden = YES;
+        _view_select3.hidden = YES;
+        _view_select1.hidden = YES;
+        
+        _btn_science.selected = NO;
+        _btn_Consulting.selected = NO;
+        _btn_Meeting.selected = NO;
+        _btn_News.selected = YES;
+    }
+}
+
+/**
+ *  计算滚动试图在当前页面的第几页
+ *
+ *  @param int 当前的页面
+ */
+-(int)calculateScrollPage
+{
+    int page=floor((_scroller_Home.contentOffset.x - SCREEN_W/4)/SCREEN_W)+1;
+    return page;
+}
+
+#pragma mark - 添加按钮上的指示条
+-(void)createSelect
+{
+    _view_select1 =[[UIView alloc]init];
+    _view_select1.backgroundColor = BLUECOLOR_STYLE;
+    _view_select1.frame = CGRectMake(0 , _btn_science.frame.size.height-1.5, SCREEN_W/4-1,1.5);
+    
+    _view_select2 =[[UIView alloc]init];
+    _view_select2.backgroundColor = BLUECOLOR_STYLE;
+    _view_select2.frame = CGRectMake(0 , _btn_science.frame.size.height-1.5, SCREEN_W/4-1,1.5);
+    
+    _view_select3 =[[UIView alloc]init];
+    _view_select3.backgroundColor = BLUECOLOR_STYLE;
+    _view_select3.frame = CGRectMake(0 , _btn_science.frame.size.height-1.5, SCREEN_W/4-1,1.5);
+    
+    _view_select4 =[[UIView alloc]init];
+    _view_select4.backgroundColor = BLUECOLOR_STYLE;
+    _view_select4.frame = CGRectMake(0 , _btn_science.frame.size.height-1.5, SCREEN_W/4-1,1.5);
+    
+    [_btn_science addSubview:_view_select1];
+    [_btn_Consulting addSubview:_view_select2];
+    [_btn_Meeting addSubview:_view_select3];
+    [_btn_News addSubview:_view_select4];
+    
+    _view_select1.hidden = NO;
+    _view_select2.hidden = YES;
+    _view_select3.hidden = YES;
+    _view_select4.hidden = YES;
+    
+    _btn_science.selected = YES;
+    _btn_Consulting.selected = NO;
+    _btn_Meeting.selected = NO;
+    _btn_News.selected = NO;
+}
+
+#pragma mark - 科普文章
+- (IBAction)btnAction_science:(UIButton *)sender
+{
+    _view_select1.hidden = NO;
+    _view_select2.hidden = YES;
+    _view_select3.hidden = YES;
+    _view_select4.hidden = YES;
+    
+    _btn_science.selected = YES;
+    _btn_Consulting.selected = NO;
+    _btn_Meeting.selected = NO;
+    _btn_News.selected = NO;
+    
+    [_scroller_Home setContentOffset:CGPointMake(0, 0)animated:YES];
+}
+
+#pragma mark - 眼科咨询
+- (IBAction)btnConsulting:(UIButton *)sender
+{
+    _view_select2.hidden = NO;
+    _view_select1.hidden = YES;
+    _view_select3.hidden = YES;
+    _view_select4.hidden = YES;
+    
+    
+    _btn_science.selected = NO;
+    _btn_Consulting.selected = YES;
+    _btn_Meeting.selected = NO;
+    _btn_News.selected = NO;
+    
+    [_scroller_Home setContentOffset:CGPointMake(SCREEN_W, 0)animated:YES];
+}
+
+#pragma mark - 学术会议
+- (IBAction)btnMetting:(UIButton *)sender
+{
+    _view_select3.hidden = NO;
+    _view_select2.hidden = YES;
+    _view_select1.hidden = YES;
+    _view_select4.hidden = YES;
+    
+    _btn_science.selected = NO;
+    _btn_Consulting.selected = NO;
+    _btn_Meeting.selected = YES;
+    _btn_News.selected = NO;
+    
+    [_scroller_Home setContentOffset:CGPointMake(SCREEN_W*2, 0)animated:YES];
+}
+
+#pragma mark - 业界新闻
+- (IBAction)btnNews:(UIButton *)sender
+{
+    _view_select4.hidden = NO;
+    _view_select2.hidden = YES;
+    _view_select3.hidden = YES;
+    _view_select1.hidden = YES;
+    
+    _btn_science.selected = NO;
+    _btn_Consulting.selected = NO;
+    _btn_Meeting.selected = NO;
+    _btn_News.selected = YES;
+    
+    [_scroller_Home setContentOffset:CGPointMake(SCREEN_W*3, 0)animated:YES];
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

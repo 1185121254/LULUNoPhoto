@@ -1,0 +1,61 @@
+//
+//  CartNumberViewController.m
+//  HuaxiaDotor
+//
+//  Created by kock on 16/5/22.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "CartNumberViewController.h"
+
+
+@interface CartNumberViewController ()
+@property (weak, nonatomic) IBOutlet UITextField *txt_cardNum;
+
+
+@end
+
+@implementation CartNumberViewController
+
+-(void)viewWillAppear:(BOOL)animated
+{
+    [_txt_cardNum becomeFirstResponder];
+
+    self.view.backgroundColor = [UIColor whiteColor];
+    _txt_cardNum.text = _str_idCard;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+}
+
+- (IBAction)btnEnter:(UIBarButtonItem *)sender
+{
+    NSUserDefaults *userDeaults = [NSUserDefaults standardUserDefaults];
+    NSMutableDictionary *userDic=[NSMutableDictionary new];
+    userDic = [userDeaults objectForKey:@"DoctorDataDic"];
+    userDic = [NSMutableDictionary dictionaryWithDictionary:userDic];
+    [userDic setObject:_txt_cardNum.text forKey:@"cardNum"];
+    [userDeaults setObject:userDic forKey:@"DoctorDataDic"];
+    [[NSUserDefaults standardUserDefaults]synchronize];
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

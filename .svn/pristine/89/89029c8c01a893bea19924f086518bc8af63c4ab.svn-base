@@ -1,0 +1,107 @@
+//
+//  KockSettingViewController.m
+//  HuaxiaDotor
+//
+//  Created by kock on 16/5/17.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "KockSettingViewController.h"
+#import "KockAboutOusViewController.h"
+//#import "NTESService.h"
+//#import "NTESLoginManager.h"
+
+
+@interface KockSettingViewController ()
+@property (weak, nonatomic) IBOutlet UIButton *btn_quit;
+
+@end
+
+@implementation KockSettingViewController
+
+-(void)viewWillAppear:(BOOL)animated
+{
+    self.navigationController.navigationBar.hidden = NO;
+    self.view.backgroundColor = [UIColor colorWithWhite:1.000 alpha:0.947];
+    _btn_quit.layer.cornerRadius = 3;
+    _btn_quit.layer.masksToBounds = YES;
+    [_btn_quit.layer setBorderColor:[UIColor redColor].CGColor];
+    _btn_quit.backgroundColor = [UIColor whiteColor];
+    [_btn_quit.layer setBorderWidth:1];
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+}
+
+#pragma mark - 修改密码
+- (IBAction)settingPassword:(UIButton *)sender
+{
+    
+}
+
+#pragma mark - 版本更新
+- (IBAction)Update:(UIButton *)sender
+{
+    
+}
+
+#pragma mark - 关于我们
+- (IBAction)aboutOus:(UIButton *)sender
+{
+//    //创建新增患者界面
+//    UIStoryboard *aboutOusStoryboard=[UIStoryboard storyboardWithName:@"PersonalStoryBoard" bundle:[NSBundle mainBundle]];
+//    //指定对应的故事版
+//    KockAboutOusViewController *aboutView=[aboutOusStoryboard instantiateViewControllerWithIdentifier:@"AboutOusStoryBoard"];
+//    //推送
+//    [self.navigationController pushViewController:aboutView animated:YES];
+}
+
+#pragma mark - 退出
+- (IBAction)quie:(UIButton *)sender
+{
+//    [[NTESLoginManager sharedManager] setCurrentLoginData:nil];
+//    [[NTESServiceManager sharedManager] destory];
+    
+    //获取登录医生数据字典
+    NSString *verCode = [kUserDefatuel objectForKey:@"verifyCode"];
+    
+    if (verCode) {
+        
+        [kUserDefatuel setObject:@"" forKey:@"verifyCode"];
+    }
+    
+    [kUserDefatuel synchronize];
+    
+    [[[NIMSDK sharedSDK] loginManager] logout:^(NSError *error){
+        if (error) {
+            kAlter(@"退出失败");
+        }else
+        {
+            UIStoryboard *log=[UIStoryboard storyboardWithName:@" LoginView" bundle:[NSBundle mainBundle]];
+            LoginViewController *login=[log instantiateViewControllerWithIdentifier:@"LoginView"];
+            login.from = @"exit";
+            UINavigationController *nav = (UINavigationController *)[UIApplication sharedApplication].keyWindow.rootViewController;
+            [nav pushViewController:login animated:YES];
+        }
+    }];
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

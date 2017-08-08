@@ -1,0 +1,42 @@
+//
+//  GruopDetailTableViewCell.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/6/6.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "GruopDetailTableViewCell.h"
+
+@implementation GruopDetailTableViewCell
+
+-(id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier{
+    if (self = [super initWithStyle:style reuseIdentifier:reuseIdentifier]) {
+     
+        _imageAvater = [[UIImageView alloc]initWithFrame:CGRectMake(10, 5, 50, 50)];
+        _imageAvater.layer.cornerRadius = 25;
+        _imageAvater.layer.masksToBounds = YES;
+        [self.contentView addSubview:_imageAvater];
+        
+        _lblName = [[UILabel alloc]initWithFrame:CGRectMake(70, 5, kWith - 80, 50)];
+        _lblName.font = [UIFont systemFontOfSize:14];
+        _lblName.numberOfLines = 0;
+        [self.contentView addSubview:_lblName];
+        
+    }
+    return self;
+}
+
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+@end

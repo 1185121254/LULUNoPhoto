@@ -1,0 +1,736 @@
+//
+//  PatientReportChatViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/6/14.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "PatientReportChatViewController.h"
+#import "UUInputFunctionView.h"
+#import "MJRefresh.h"
+#import "UUMessageCell.h"
+#import "IQKeyboardManager.h"
+#import "UUMessageFrame.h"
+#import "UUMessage.h"
+#import "UUInputView.h"
+
+#import "MessageCustomCell.h"
+
+#import "MessageSystemTableViewCell.h"
+#import "Attachment.h"
+#import "PatientListrepotViewController.h"
+#import "AddressListViewController.h"
+#import "AddTestDetailDocViewController.h"
+#import "PatientRepotViewController.h"
+
+@interface PatientReportChatViewController ()<UUInputFunctionViewDelegate,UUMessageCellDelegate,UITableViewDataSource,UITableViewDelegate,NIMChatManagerDelegate,NIMChatManager,NIMConversationManagerDelegate,UUInputViewDelegate>
+{
+    UUInputFunctionView *IFView;
+    UUInputView *InPutView;
+    UUMessageFrame *messageFrame;
+    NIMSession *_patientSession;
+    
+    UITableView *_tableView;
+    UIButton *_RightItemReport;
+    UIView *_viewBottomFree;
+    
+    NSMutableDictionary *_patientDic;
+    NSMutableDictionary *_doctorDic;
+    NSDictionary *_reviceMeg;
+    NSDictionary *_sendMeg;
+    
+    
+    NSDictionary *_dicCom;
+    NSMutableArray *_arryData;
+    
+    NSString *_strID;
+    NSString *_strIM;
+    NSString *_strSource;
+}
+@end
+
+@implementation PatientReportChatViewController
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    [[IQKeyboardManager sharedManager] setEnable:NO];
+    
+}
+
+-(void)viewDidAppear:(BOOL)animated{
+    [super viewDidAppear:animated];
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(keyboardChangeReport:) name:UIKeyboardWillShowNotification object:nil];
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(keyboardChangeReport:) name:UIKeyboardWillHideNotification object:nil];
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(tableViewScrollToBottomReport) name:UIKeyboardDidShowNotification object:nil];
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+
+    [self creatSource];
+    
+    _patientSession = [NIMSession session:_strIM type:NIMSessionTypeP2P];
+    [[NIMSDK sharedSDK].chatManager addDelegate:self];
+    
+    self.view.backgroundColor = kBoradColor;
+    _arryData = [NSMutableArray array];
+    
+    self.automaticallyAdjustsScrollViewInsets = NO;
+    _tableView  = [[UITableView alloc]initWithFrame:CGRectMake(0, 64, kWith, kHeight - 64 - 40)];
+    _tableView.rowHeight = UITableViewAutomaticDimension;
+    _tableView.keyboardDismissMode = UIScrollViewKeyboardDismissModeOnDrag;
+    _tableView.delegate = self;
+    _tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    _tableView.dataSource = self;
+    [self.view addSubview:_tableView];
+    
+    [self setDataOfDoctor];
+    [self setDataOfPatient];
+    [self getHistoryMessage];
+    [self loadBaseViewsAndData];
+    
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(onTapReport)];
+    [self.view addGestureRecognizer:tap];
+    
+}
+
+-(void)creatSource{
+    _RightItemReport = [UIButton buttonWithType:UIButtonTypeCustom];
+    _RightItemReport.titleLabel.textAlignment = 1;
+    _RightItemReport.titleLabel.font = [UIFont systemFontOfSize:16];
+    [_RightItemReport addTarget:self action:@selector(onItemReport) forControlEvents:UIControlEventTouchUpInside];
+    UIBarButtonItem *rg = [[UIBarButtonItem alloc]initWithCustomView:_RightItemReport];
+    self.navigationItem.rightBarButtonItem = rg;
+    
+    UIButton *btnleft = [UIButton buttonWithType:UIButtonTypeCustom];
+    btnleft.frame = CGRectMake(0, 0, 13, 22);
+    [btnleft addTarget:self action:@selector(onItemreportLeft) forControlEvents:UIControlEventTouchUpInside];
+    [btnleft setBackgroundImage:[UIImage imageNamed:@"返回"] forState:UIControlStateNormal];
+    UIBarButtonItem *letf = [[UIBarButtonItem alloc]initWithCustomView:btnleft];
+    self.navigationItem.leftBarButtonItem = letf;
+    
+    if ([self.from isEqualToString:@"address"]) {
+        _strSource = @"5";
+        _strIM = [NSString stringWithFormat:@"d%@",[self.patientDoc objectForKey:@"loginId"]];
+        _strID = @"0";
+        self.title = [self.patientDoc objectForKey:@"userName"];
+        _RightItemReport.frame = CGRectMake(0, 0, 70, 40);
+        [_RightItemReport setTitle:@"个人信息" forState:UIControlStateNormal];
+        _RightItemReport.hidden = NO;
+        
+    }else if([self.from isEqualToString:@"report"])
+    {
+        _strSource = @"4";
+        _strIM = [self.patientDoc objectForKey:@"patientIM"];
+        _strID = [self.patientDoc objectForKey:@"friendId"];
+        self.title = [self.patientDoc objectForKey:@"name"];
+        _RightItemReport.frame = CGRectMake(0, 0, 80, 40);
+        [_RightItemReport setTitle:@"患者报到单" forState:UIControlStateNormal];
+        _RightItemReport.hidden = NO;
+    }
+}
+
+-(void)onTapReport{
+    _viewBottomFree.hidden = YES;
+    [self changeNomalFram];
+    [IFView.TextViewInput resignFirstResponder];
+}
+
+-(void)changeNomalFram{
+    [UIView animateWithDuration:0.2 animations:^{
+        IFView.frame = CGRectMake(0, kHeight-40, kWith, 40);
+        InPutView.frame = CGRectMake(0, kHeight, kWith, 120);
+        _tableView.frame = CGRectMake(0, 60, kWith, kHeight-40 -60);
+    }];
+}
+
+#pragma mark 设置聊天键盘
+- (void)loadBaseViewsAndData
+{
+    IFView = [[UUInputFunctionView alloc]initWithSuperVC:self];
+    IFView.delegate = self;
+    [self.view addSubview:IFView];
+    
+    InPutView  = [[UUInputView alloc]initWithSuperVC:self TipCount:2];
+    InPutView.delegate  =self;
+    [self.view addSubview:InPutView];
+    
+}
+#pragma mark 设置医生数据
+-(void)setDataOfDoctor
+{
+    _doctorDic = [NSMutableDictionary dictionary];
+    NSDictionary *dic =[[NSUserDefaults standardUserDefaults] objectForKey:@"DoctorDataDic"];
+    
+    NSString *url = [NSString stringWithFormat:@"%@%@",NET_URLSTRING,[dic objectForKey:@"picFileName"]];
+    if (url) {
+        [_doctorDic setObject:url forKey:@"strIcon"];
+    }
+    if ([dic objectForKey:@"userName"]) {
+        [_doctorDic setObject:[dic objectForKey:@"userName"] forKey:@"strName"];
+    }
+    [_doctorDic setObject:[NSNumber numberWithInt:0] forKey:@"from"];
+}
+#pragma mark 设置患者数据
+-(void)setDataOfPatient
+{
+    
+    NSString *uyl = [NSString stringWithFormat:@"%@%@",NET_URLSTRING,[self.patientDoc objectForKey:@"picFileName"]];
+    NSString *url = [uyl stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    _patientDic = [NSMutableDictionary dictionary];
+    [_patientDic setObject:[NSNumber numberWithInt:1] forKey:@"from"];
+    [_patientDic setObject:url forKey:@"strIcon"];
+    if ([self.patientDoc objectForKey:@"name"] != nil) {
+        [_patientDic setObject:[self.patientDoc objectForKey:@"name"] forKey:@"strName"];
+    }
+}
+
+-(NSDictionary *)addDataOfSendWithData:(id)data type:(NSNumber *)type sendDic:(NSDictionary *)dic sendTime:(NSString *)time
+{
+    NSMutableDictionary *newDic = [NSMutableDictionary dictionaryWithDictionary:dic];
+    [newDic setObject:time forKey:@"strTime"];
+    [newDic setObject:type forKey:@"type"];
+    NSArray *arr;
+    if ([data isKindOfClass:[NSArray class]]) {
+        arr = (NSArray *)data;
+    }
+    switch ([type integerValue]) {
+        case 0:
+            [newDic setObject:(NSString *)data forKey:@"strContent"];
+            break;
+        case 1:
+            [newDic setObject:[arr firstObject] forKey:@"picture"];
+            if (arr.count > 1) {
+                [newDic setObject:[arr lastObject] forKey:@"pictureUrl"];
+            }
+            break;
+        case 2:
+            [newDic setObject:[arr objectAtIndex:0] forKey:@"voice"];
+            [newDic setObject:[arr objectAtIndex:1] forKey:@"strVoiceTime"];
+            break;
+        default:
+            break;
+    };
+    return newDic;
+}
+
+-(void)dealloc{
+}
+
+#pragma mark 历史数据
+-(void)getHistoryMessage
+{
+    
+//    NSDictionary *dic =[[NSUserDefaults standardUserDefaults] objectForKey:@"DoctorDataDic"];
+    NSArray *historyMessageArray = [[NIMSDK sharedSDK].conversationManager messagesInSession:_patientSession message:nil limit:NSIntegerMax];
+    if (historyMessageArray.count == 0) {
+        
+    }
+    
+    for (NSInteger i=0; i<historyMessageArray.count; i++) {
+        NIMMessage *message = [historyMessageArray objectAtIndex:i];
+//        if ([message.from isEqualToString:[self.patientDoc objectForKey:@"patientIM"]] || [message.from isEqualToString:[NSString stringWithFormat:@"d%@",[dic objectForKey:@"friendId"]]]) {
+            NSDictionary *dicIM = message.remoteExt;
+            if ([_strID isEqualToString:[dicIM objectForKey:@"order"]] && [[dicIM objectForKey:@"source"] isEqualToString:_strSource]) {
+                if (message.messageType == NIMMessageTypeText) {
+                    [self setTextMessageWithMessageReport:message];
+                }
+                else if(message.messageType == NIMMessageTypeCustom){
+                    [self getCustomMessageReport:message];
+                }
+                else
+                {
+                    [self setMessageArrayWithMessageReport:message];
+                }
+            }
+//        }
+    }
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return _arryData.count;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    if ([_arryData[indexPath.row] isKindOfClass:[UUMessageFrame class]]) {
+        UUMessageCell *cell = [tableView dequeueReusableCellWithIdentifier:@"CellID"];
+        if (cell == nil) {
+            cell = [[UUMessageCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"CellID"];
+            cell.delegate = self;
+        }
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        [cell setMessageFrame:_arryData[indexPath.row]];
+        return cell;
+    }else{
+        if ([_arryData[indexPath.row] isKindOfClass:[NSDictionary class]]) {
+            MessageCustomCell *cell = [tableView dequeueReusableCellWithIdentifier:@"MessageCustomCell"];
+            if (!cell) {
+                cell = [[[NSBundle mainBundle]loadNibNamed:@"MessageCustomCell" owner:self options:nil]lastObject];
+            }
+            NSString *uyl = [NSString stringWithFormat:@"%@%@",NET_URLSTRING,[self.patientDoc objectForKey:@"picFileName"]];
+            NSString *url = [uyl stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+            [cell messageCustomCell:_arryData[indexPath.row] AvterURL:url];
+            return cell;
+        }else{
+            MessageSystemTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"MessageSystemTableViewCell"];
+            if (!cell) {
+                cell = [[[NSBundle mainBundle]loadNibNamed:@"MessageSystemTableViewCell" owner:self options:nil]lastObject];
+            }
+            cell.systemLabel.text = _arryData[indexPath.row];
+            return cell;
+        }
+    }
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    if ([_arryData[indexPath.row] isKindOfClass:[UUMessageFrame class]]) {
+        return [_arryData[indexPath.row] cellHeight];
+    }
+    else if ([_arryData[indexPath.row] isKindOfClass:[NSDictionary class]]){
+        NSDictionary *dic = _arryData[indexPath.row];
+        NSDictionary *dicValue = [dic objectForKey:@"value"];
+        NSString *symptom = [dicValue objectForKey:@"symptom"];
+        if (symptom) {
+            CGRect rect = [symptom boundingRectWithSize:CGSizeMake(kWith-50-60, 500) options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName:[UIFont systemFontOfSize:13]} context:nil];
+            if (rect.size.height+31 < 44+25) {
+                return 44+25+20;
+            }else
+            {
+                return rect.size.height+81;
+            }
+        }else
+        {
+            return 44+25+20;
+        }
+    }
+    return -1;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    [self.view endEditing:YES];
+}
+
+
+- (void)tableViewScrollToBottomReport
+{
+    if (_arryData.count > 0){
+        NSIndexPath *indexPath = [NSIndexPath indexPathForRow:_arryData.count-1 inSection:0];
+        [_tableView scrollToRowAtIndexPath:indexPath atScrollPosition:UITableViewScrollPositionBottom animated:YES];
+    }
+}
+
+#pragma mark - 回调
+- (void)UUInputFunctionView:(UUInputFunctionView *)funcView sendMessage:(NSString *)message
+{
+    
+    if (IFView.TextViewInput.text == nil || [IFView.TextViewInput.text isEqualToString:@""]) {
+        [IFView.TextViewInput resignFirstResponder];
+        return;
+    }
+    
+    funcView.TextViewInput.text = @"";
+    _sendMeg = [self addDataOfSendWithData:message type:[NSNumber numberWithInt:UUMessageTypeText] sendDic:_doctorDic sendTime:[[NSDate date] description]];
+    [self sendDoctorMessage:message];
+}
+
+-(void)creatSendMegRe:(NSDictionary *)dic{
+    [self setMessageFrameWithDataReport:dic];
+    [_arryData addObject:messageFrame];
+    [_tableView reloadData];
+    [self tableViewScrollToBottomReport];
+}
+
+-(void)UUInputView:(UUInputView *)funcView sendPicture:(UIImage *)image{
+    _sendMeg = [self addDataOfSendWithData:@[image] type:[NSNumber numberWithInt:UUMessageTypePicture] sendDic:_doctorDic sendTime:[[NSDate date] description]];
+    [self sendDoctorPicture:image];
+    
+    [self changeNomalFram];
+}
+
+-(void)UUinputCustom:(UUInputView *)custom{
+    
+    UIAlertView *alert = [[UIAlertView alloc]initWithTitle:@"Tip" message:@"自定义消息：暂未开发此功能" delegate:nil cancelButtonTitle:@"sure" otherButtonTitles:nil];
+    [alert show];
+    
+}
+
+-(void)UUInputView{
+    
+    [UIView beginAnimations:nil context:nil];
+    [UIView setAnimationDuration:0.2f];
+    CGRect newFrame = IFView.frame;
+    newFrame.origin.y = kHeight-120-40;
+    IFView.frame = newFrame;
+    
+    _tableView.frame = CGRectMake(0, 60, kWith, IFView.frame.origin.y-60);
+    
+    CGRect InPutNewFrame = InPutView.frame;
+    InPutNewFrame.origin.y = kHeight-120;
+    InPutView.frame = InPutNewFrame;
+    [UIView commitAnimations];
+    [self tableViewScrollToBottomReport];
+}
+
+- (void)UUInputFunctionView:(UUInputFunctionView *)funcView sendVoice:(NSData *)voice time:(NSInteger)second
+{
+    
+}
+-(void)UUInputFunctionView:(UUInputFunctionView *)funcView sendVoicePath:(NSString *)path time:(NSInteger)second
+{
+    NSData *voice = [NSData dataWithContentsOfFile:path];
+    NSArray *arr = @[voice,[NSString stringWithFormat:@"%ld",(long)second]];
+    _sendMeg = [self addDataOfSendWithData:arr type:[NSNumber numberWithInt:UUMessageTypeVoice] sendDic:_doctorDic sendTime:[[NSDate date] description]];
+    [self sendDoctorVoicePath:path];
+
+    
+    [self changeNomalFram];
+}
+
+#pragma mark 发送信息
+//发送文本
+-(void)sendDoctorMessage:(NSString *)mes
+{
+    //构造消息
+    NIMMessage *message = [[NIMMessage alloc] init];
+    message.text = mes;
+    message.remoteExt = @{@"order":_strID,@"source":_strSource};
+    message.apnsContent = mes;
+
+    //发送消息
+    [[NIMSDK sharedSDK].chatManager sendMessage:message toSession:_patientSession error:nil];
+}
+//发送图片
+-(void)sendDoctorPicture:(UIImage *)image
+{
+    //构造消息
+    NIMImageObject * imageObject = [[NIMImageObject alloc] initWithImage:image];
+    NIMMessage *message          = [[NIMMessage alloc] init];
+    message.messageObject        = imageObject;
+    message.remoteExt = @{@"order":_strID,@"source":_strSource};
+    message.apnsContent = @"发来了一张图片";
+
+    //发送消息
+    [[NIMSDK sharedSDK].chatManager sendMessage:message toSession:_patientSession error:nil];
+}
+//发送语音
+-(void)sendDoctorVoicePath:(NSString *)filePath
+{
+    //构造消息
+    NIMAudioObject *audioObject = [[NIMAudioObject alloc] initWithSourcePath:filePath];
+    NIMMessage *message        = [[NIMMessage alloc] init];
+    message.messageObject      = audioObject;
+    message.remoteExt = @{@"order":_strID,@"source":_strSource};
+    message.apnsContent = @"发来了一段语音";
+
+    //发送消息
+    [[NIMSDK sharedSDK].chatManager sendMessage:message toSession:_patientSession error:nil];
+}
+//发送自定义消息
+- (void)sendCustomMessageWithFlag:(NSNumber *)flag patientDic:(NSDictionary *)patientDic
+{
+    //构造自定义内容
+    Attachment *attachment = [[Attachment alloc] init];
+    attachment.flag = flag;
+    attachment.patientDic = patientDic;
+    
+    //构造自定义MessageObject
+    NIMCustomObject *object = [[NIMCustomObject alloc] init];
+    object.attachment = attachment;
+    
+    //构造自定义消息
+    NIMMessage *message = [[NIMMessage alloc] init];
+    message.messageObject = object;
+    message.remoteExt = @{@"order":_strID,@"source":_strSource};
+    
+    //发送消息
+    [[NIMSDK sharedSDK].chatManager sendMessage:message toSession:_patientSession error:nil];
+}
+//提醒消息
+-(void)sendTipMessageWithFlag:(NSString *)flag
+{
+    //构造消息
+    NIMTipObject *tipObject = [[NIMTipObject alloc]init];
+    NIMMessage *message     = [[NIMMessage alloc] init];
+    message.text = flag;
+    message.messageObject   = tipObject;
+    
+    //发送消息
+    [[NIMSDK sharedSDK].chatManager sendMessage:message toSession:_patientSession error:nil];
+}
+
+#pragma mark 发送消息代理方法
+//即将发送消息
+-(void)willSendMessage:(NIMMessage *)message
+{
+    NSLog(@"即将发送消息");
+}
+//消息发送进度
+-(void)sendMessage:(NIMMessage *)message progress:(CGFloat)progress
+{
+    NSLog(@"发送消息中……");
+}
+//消息发送完毕
+-(void)sendMessage:(NIMMessage *)message didCompleteWithError:(NSError *)error
+{
+    NSLog(@"发送消息完毕");
+    if (error == nil) {
+        [self creatSendMegRe:_sendMeg];
+    }else{
+        kAlter(@"发送失败,请检查网络");
+    }
+}
+//重发
+-(BOOL)resendMessage:(NIMMessage *)message error:(NSError *__autoreleasing *)error
+{
+    if (error != nil) {
+        kAlter(@"提交失败");
+        return YES;
+    }
+    
+    return YES;
+}
+
+#pragma mark 接收消息
+//接收文本消息
+-(void)onRecvMessages:(NSArray *)messages
+{
+    NIMMessage *message = [messages firstObject];
+    NSDictionary *dicWeb = message.remoteExt;
+    if ([_strID isEqualToString:[dicWeb objectForKey:@"order"]] && [[dicWeb objectForKey:@"source"] isEqualToString:_strSource]) {
+        
+        if ([message.session.sessionId isEqualToString:_strIM]) {
+            if (message.messageType == NIMMessageTypeText) {
+                [self setTextMessageWithMessageReport:message];
+            }else if (message.messageType == NIMMessageTypeCustom){
+                [self getCustomMessageReport:message];
+            }else if (message.messageType == NIMMessageTypeTip){
+//                [self getTipMessage:message];
+            }
+        }
+    }
+}
+//接收图片视频消息
+//第一次接收时
+-(BOOL)fetchMessageAttachment:(NIMMessage *)message error:(NSError *__autoreleasing *)error
+{
+    return YES;
+}
+//附件下载过程时
+-(void)fetchMessageAttachment:(NIMMessage *)message progress:(CGFloat)progress
+{
+    
+}
+-(void)fetchMessageAttachment:(NIMMessage *)message didCompleteWithError:(NSError *)error
+{
+    if ([message.session.sessionId isEqualToString:_strIM]) {
+        NSDictionary *dicIM = message.remoteExt;
+        if ([_strID isEqualToString:[dicIM objectForKey:@"order"]] && [[dicIM objectForKey:@"source"] isEqualToString:_strSource]) {
+            [self setMessageArrayWithMessageReport:message];
+        }
+    }
+}
+
+
+
+#pragma mark 添加消息
+//添加文字
+-(void)setTextMessageWithMessageReport:(NIMMessage *)message
+{
+    NSDate *sendTime = [NSDate dateWithTimeIntervalSince1970:message.timestamp];
+    if ([message.from isEqualToString:_strIM]) {
+            _reviceMeg = [self addDataOfSendWithData:message.text type:[NSNumber numberWithInt:UUMessageTypeText] sendDic:_patientDic sendTime:[sendTime description]];
+        }else
+        {
+            _reviceMeg = [self addDataOfSendWithData:message.text type:[NSNumber numberWithInt:UUMessageTypeText] sendDic:_doctorDic sendTime:[sendTime description]];
+        }
+    [self creatSendMegRe:_reviceMeg];
+
+}
+
+-(void)setMessageArrayWithMessageReport:(NIMMessage *)message
+{
+    NSDate *sendTime = [NSDate dateWithTimeIntervalSince1970:message.timestamp];
+    
+    if (message.messageType == NIMMessageTypeImage) {
+        //图片
+        NIMImageObject *imageObject = (NIMImageObject *)message.messageObject;
+        NSString *imageUrl = imageObject.url;
+        UIImage *image = [UIImage imageWithContentsOfFile:imageObject.thumbPath];
+        if (image && imageUrl) {
+            if ([message.from isEqualToString:_strIM]) {
+                _reviceMeg = [self addDataOfSendWithData:@[image,imageUrl] type:[NSNumber numberWithInt:UUMessageTypePicture] sendDic:_patientDic sendTime:[sendTime description]];
+            }else
+            {
+                _reviceMeg = [self addDataOfSendWithData:@[image,imageUrl] type:[NSNumber numberWithInt:UUMessageTypePicture] sendDic:_doctorDic sendTime:[sendTime description]];
+            }
+            [self creatSendMegRe:_reviceMeg];
+        }
+    }else if (message.messageType == NIMMessageTypeAudio){
+        
+        NIMAudioObject *audioObject = (NIMAudioObject *)message.messageObject;
+        NSData *voice = [NSData dataWithContentsOfFile:audioObject.path];
+        NSString *voiceTime = [NSString stringWithFormat:@"%ld",audioObject.duration/1000];
+        if (voice && voiceTime) {
+            if ([message.from isEqualToString:_strIM]) {
+                _reviceMeg = [self addDataOfSendWithData:@[voice,voiceTime] type:[NSNumber numberWithInt:UUMessageTypeVoice] sendDic:_patientDic sendTime:[sendTime description]];
+            }else
+            {
+                _reviceMeg = [self addDataOfSendWithData:@[voice,voiceTime] type:[NSNumber numberWithInt:UUMessageTypeVoice] sendDic:_doctorDic sendTime:[sendTime description]];
+            }
+            [self creatSendMegRe:_reviceMeg];
+        }
+    }
+
+}
+
+
+#pragma mark 接收自定义消息
+-(void)getCustomMessageReport:(NIMMessage *)message
+{
+    if (message.messageType == NIMMessageTypeCustom) {
+        NIMCustomObject *customMessage = (NIMCustomObject *)message.messageObject;
+        Attachment *attachment  = (Attachment *)customMessage.attachment;
+        switch ([attachment.flag integerValue]) {
+            case 0:
+                break;
+            case 5:
+            {
+                [_arryData addObject:attachment.patientDic];
+                [_tableView reloadData];
+                [self tableViewScrollToBottomReport];
+            }
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+#pragma mark 设置MessageFrame
+static NSString *previousTime = nil;
+-(void)setMessageFrameWithDataReport:(NSDictionary *)dic
+{
+    messageFrame = [[UUMessageFrame alloc]init];
+    UUMessage *message = [[UUMessage alloc] init];
+    [message setWithDict:dic];
+    [message minuteOffSetStart:previousTime end:dic[@"strTime"]];
+    messageFrame.showTime = message.showDateLabel;
+    [messageFrame setMessage:message];
+    
+    if (message.showDateLabel) {
+        previousTime = dic[@"strTime"];
+    }
+}
+
+
+#pragma mark 设置键盘
+-(void)keyboardChangeReport:(NSNotification *)notification
+{
+    NSDictionary *userInfo = [notification userInfo];
+    NSTimeInterval animationDuration;
+    UIViewAnimationCurve animationCurve;
+    CGRect keyboardEndFrame;
+    
+    [[userInfo objectForKey:UIKeyboardAnimationCurveUserInfoKey] getValue:&animationCurve];
+    [[userInfo objectForKey:UIKeyboardAnimationDurationUserInfoKey] getValue:&animationDuration];
+    [[userInfo objectForKey:UIKeyboardFrameEndUserInfoKey] getValue:&keyboardEndFrame];
+    
+    [UIView beginAnimations:nil context:nil];
+    [UIView setAnimationDuration:animationDuration];
+    [UIView setAnimationCurve:animationCurve];
+    
+    //adjust ChatTableView's height
+    if (notification.name == UIKeyboardWillShowNotification) {
+        _tableView.frame = CGRectMake(0, 60, kWith, kHeight- keyboardEndFrame.size.height-40 -60);
+    }else{
+        _tableView.frame = CGRectMake(0, 60, kWith, kHeight - 40 -60);
+    }
+    
+    //adjust UUInputFunctionView's originPoint
+    CGRect newFrame = IFView.frame;
+    newFrame.origin.y = keyboardEndFrame.origin.y - newFrame.size.height;
+    IFView.frame = newFrame;
+    
+    [UIView commitAnimations];
+    
+}
+
+#pragma mark 右按钮项
+-(void)onItemReport{
+
+  if([self.from isEqualToString:@"report"])
+    {
+        PatientListrepotViewController *re = [[PatientListrepotViewController alloc]init];
+        re.patientID = [self.patientDoc objectForKey:@"id"];
+        [self.navigationController pushViewController:re animated:YES];
+    }
+    else if ([self.from isEqualToString:@"address"]){
+    
+        AddTestDetailDocViewController *addText = [[AddTestDetailDocViewController alloc]init];
+        addText.dicData = self.patientDoc;
+        addText.from = @"address";
+        [self.navigationController pushViewController:addText animated:YES];
+        
+    }
+    
+}
+
+-(void)onItemreportLeft{
+    
+        for (UIViewController *vc in self.navigationController.viewControllers) {
+            if ([vc isKindOfClass:[AddressListViewController class]]) {
+                AddressListViewController *patie = (AddressListViewController *)vc;
+                [self.navigationController popToViewController:patie animated:YES];
+                break;
+            }
+            if ([vc isKindOfClass:[PatientRepotViewController class]]) {
+                PatientRepotViewController *patie = (PatientRepotViewController *)vc;
+                [self.navigationController popToViewController:patie animated:YES];
+                break;
+            }
+            
+        }
+}
+
+-(void)viewWillDisappear:(BOOL)animated{
+    [super viewWillDisappear:animated];
+    [[IQKeyboardManager sharedManager] setEnable:YES];
+
+    NSMutableDictionary *Dic = [[NSMutableDictionary alloc]init];
+
+    if ([self.from isEqualToString:@"address"]) {
+        [Dic setValue:@"0" forKey:@"orderId"];
+        [Dic setObject:[NSString stringWithFormat:@"d%@",[self.patientDoc objectForKey:@"loginId"]] forKey:@"fromAccount"];
+    }else
+    {
+        [Dic setValue:[self.patientDoc objectForKey:@"friendId"] forKey:@"orderId"];
+        [Dic setObject:[self.patientDoc objectForKey:@"patientIM"] forKey:@"fromAccount"];
+    }
+
+    [Dic setObject:[NSString stringWithFormat:@"d%@",[[kUserDefatuel objectForKey:@"DoctorDataDic"] objectForKey:@"loginid"]] forKey:@"toAccount"];
+    [RequestManager CloseOnLine:[NSString stringWithFormat:@"%@/api/Share/SetMessageIsRead",NET_URLSTRING] Parameters:Dic Complation:^(NSNumber *code) {
+        if ([code integerValue] == 10000) {
+            NSLog(@"已读");
+        }
+    } Fail:^(NSError *error) {
+        
+    }];
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

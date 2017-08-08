@@ -1,0 +1,216 @@
+//
+//  SelectCityViewController.m
+//  HuaxiaPatient
+//
+//  Created by 欧阳晓隆 on 16/3/28.
+//  Copyright © 2016年 欧阳晓隆. All rights reserved.
+//
+
+#import "SelectCityViewController.h"
+#import "SelectCityTableViewCell.h"
+#import <CoreLocation/CoreLocation.h>
+
+#define CELL_NIB @"SelectCityTableViewCell"
+static NSString *const cityKey = @"city";
+static NSString *const provinceKey = @"province";
+
+@interface SelectCityViewController ()<UITableViewDelegate,UITableViewDataSource,CLLocationManagerDelegate>
+{
+    __weak IBOutlet UITableView *provinceTableview;
+    __weak IBOutlet UITableView *cityTableview;
+    NSMutableArray *provinceArray;
+    NSMutableArray *cityArray;
+    NSInteger selectIndex;
+    
+    NSString *seletedProvince;
+    
+    NSString *currentCity;
+    __weak IBOutlet UILabel *currentCityLab;
+    __weak IBOutlet UIActivityIndicatorView *currentCityActivity;
+    CLLocationManager *locationManager;
+}
+@end
+
+@implementation SelectCityViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self setNavigationBar];
+//    provinceArray = [PublicTools getCitiesListOfChinaFromPlist];
+    //发布摄影大赛
+    provinceArray = [NSMutableArray array];
+
+    if (![self.from isEqualToString:@"Publish"]) {
+        NSDictionary *chinaDic = @{provinceKey:@"全国",cityKey:@[@{cityKey:@"全国"}]};
+        [provinceArray addObject:chinaDic];
+    }
+    seletedProvince = @"全国";
+    [self downloadProvinceListOfHospital];
+    
+    provinceTableview.rowHeight = UITableViewAutomaticDimension;
+    provinceTableview.estimatedRowHeight = 79;
+    selectIndex = 0;
+    
+    cityTableview.rowHeight = UITableViewAutomaticDimension;
+    cityTableview.estimatedRowHeight = 58;
+    self.automaticallyAdjustsScrollViewInsets=NO;
+    
+//    [self locate];
+    // Do any additional setup after loading the view from its nib.
+}
+#pragma mark 设置导航栏
+-(void)setNavigationBar
+{
+    self.title = @"选择地区";
+    self.tabBarController.tabBar.hidden = YES;
+    UIBarButtonItem *leftBtn = [[UIBarButtonItem alloc]initWithTitle:@"取消" style:UIBarButtonItemStyleDone target:self action:@selector(goBack)];
+    leftBtn.tintColor = [UIColor whiteColor];
+    self.navigationItem.leftBarButtonItem = leftBtn;
+}
+-(void)goBack
+{
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+#pragma mark tableview设置
+-(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return 1;
+}
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    if (tableView.tag == provinceTableview.tag) {
+        return provinceArray.count;
+    }else{
+        return cityArray.count;
+    }
+}
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *provinceCellString = @"provinceCell";
+    SelectCityTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:provinceCellString ];
+    if (!cell) {
+        cell = [[[NSBundle mainBundle] loadNibNamed:CELL_NIB owner:self options:nil] lastObject];
+    }
+    
+    if (tableView.tag == provinceTableview.tag) {
+        NSDictionary *dic = [provinceArray objectAtIndex:indexPath.row];
+        [cell setDataWithLabel:[dic objectForKey:provinceKey] cellIdentifier:@"province" selectIndex:selectIndex currentIndex:indexPath.row];
+    }else{
+        [cell setDataWithLabel:[cityArray objectAtIndex:indexPath.row] cellIdentifier:@"city" selectIndex:0 currentIndex:0];
+    }
+    return cell;
+}
+-(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return -1;
+}
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    if (tableView.tag == provinceTableview.tag) {
+        selectIndex = indexPath.row;
+        NSDictionary *dic = [provinceArray objectAtIndex:indexPath.row];
+        [self getCityArrayWithProvince:[dic objectForKey:cityKey]];
+        seletedProvince = [dic objectForKey:provinceKey];
+        [provinceTableview reloadData];
+        [cityTableview reloadData];
+    }else{
+
+        NSDictionary *dic = @{@"province":seletedProvince,@"city":[cityArray objectAtIndex:indexPath.row]};
+        if ([self.from isEqualToString:@"Publish"]) {
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"ChangCityPhotoPublish" object:dic];
+        }else{
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"ChangCityPhoto" object:dic];
+        }
+        [self.navigationController popViewControllerAnimated:YES];
+    }
+    
+    
+}
+//获取城市名单
+-(void)getCityArrayWithProvince:(NSArray *)province
+{
+    cityArray = [NSMutableArray array];
+    for (NSInteger i = 0; i<province.count; i++) {
+        NSDictionary *dic = [province objectAtIndex:i];
+        [cityArray addObject:[dic objectForKey:cityKey]];
+    }
+}
+#pragma mark 网络请求
+-(void)downloadProvinceListOfHospital
+{
+    [RequestManager postWithURLStringALL:[NSString stringWithFormat:@"%@/api/Patient/GetAreas",NET_URLSTRING] heads:nil parameters:nil viewConroller:self success:^(id responseObject, BOOL ifTimeout) {
+        NSArray *arr = (NSArray *)responseObject;
+        [provinceArray addObjectsFromArray:arr];
+        NSArray *hotCounty = [provinceArray[0] objectForKey:cityKey];
+        [self getCityArrayWithProvince:hotCounty];
+        [provinceTableview reloadData];
+        [cityTableview reloadData];
+    } failure:^(NSError *error) {
+        
+    }];
+
+}
+#pragma mark 定位
+- (void)locate {
+    // 判断是否开启定位
+    if ([CLLocationManager locationServicesEnabled]) {
+        locationManager = [[CLLocationManager alloc] init];
+        locationManager.delegate = self;
+        [locationManager requestWhenInUseAuthorization];
+        [locationManager startUpdatingLocation];
+        [currentCityActivity startAnimating];
+    } else {
+        kAlter(@"无法进行定位\n请检查您的设备是否开启定位功能");
+    }
+}
+- (void)locationManager:(CLLocationManager *)manager didUpdateLocations:(NSArray *)locations {
+    CLLocation *currentLocation = [locations lastObject]; // 最后一个值为最新位置
+    CLGeocoder *geoCoder = [[CLGeocoder alloc] init];
+    // 根据经纬度反向得出位置城市信息
+    [geoCoder reverseGeocodeLocation:currentLocation completionHandler:^(NSArray *placemarks, NSError *error) {
+        if (placemarks.count > 0) {
+            CLPlacemark *placeMark = placemarks[0];
+            currentCity = placeMark.locality;
+            // ? placeMark.locality : placeMark.administrativeArea;
+            if (!currentCity) {
+                currentCity = @"无法定位当前城市";
+            }
+            // 获取城市信息后, 异步更新界面信息.      dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            dispatch_async(dispatch_get_main_queue(), ^{
+                currentCityLab.text = currentCity;
+                [currentCityActivity stopAnimating];
+            });
+//        });
+    } else if (error == nil && placemarks.count == 0) {
+        
+    } else if (error) {
+        NSLog(@"%@",error);
+    }
+     }];
+    
+    [manager stopUpdatingLocation];
+    
+}
+#pragma mark - 选择当前定位
+- (IBAction)selectCurrentCityAction:(id)sender {
+    [self.delegate selectCity:currentCity];
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

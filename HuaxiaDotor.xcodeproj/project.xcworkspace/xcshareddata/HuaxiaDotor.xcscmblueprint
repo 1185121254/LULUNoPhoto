@@ -1,0 +1,25 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "f893ff83-15ce-4844-a2ea-759f0c34f17c++8015",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+    "f893ff83-15ce-4844-a2ea-759f0c34f17c++8015" : {
+
+    }
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "f893ff83-15ce-4844-a2ea-759f0c34f17c++8015" : 0
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "52C2FC5C-60FC-4CDA-A990-7D5D643DBD57",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "f893ff83-15ce-4844-a2ea-759f0c34f17c++8015" : "Doc4s\/"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "HuaxiaDotor",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "HuaxiaDotor\/HuaxiaDotor.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/192.168.1.100\/svn\/HuaXia",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Subversion",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "f893ff83-15ce-4844-a2ea-759f0c34f17c++8015"
+    }
+  ]
+}

@@ -1,0 +1,193 @@
+//
+//  ZhifubaoViewController.m
+//  HuaxiaDotor
+//
+//  Created by kock on 16/5/23.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "ZhifubaoViewController.h"
+
+@interface ZhifubaoViewController ()
+@property (weak, nonatomic) IBOutlet UILabel *lbl_name;
+@property (weak, nonatomic) IBOutlet UITextField *txt_count;
+@property (strong, nonatomic) NSString *str_doctorID;
+@property (strong, nonatomic) NSString *str_verifyCode;
+@property (strong, nonatomic) NSMutableDictionary *dic_zhifubaoData;
+//解除
+@property (weak, nonatomic) IBOutlet UIButton *btnUnchain;
+//绑定
+@property (weak, nonatomic) IBOutlet UIButton *btnBound;
+
+
+@end
+
+@implementation ZhifubaoViewController
+
+-(void)viewWillAppear:(BOOL)animated
+{
+    _dic_zhifubaoData = [[NSMutableDictionary alloc]init];
+     NSUserDefaults *userDefaults=[NSUserDefaults standardUserDefaults];
+    NSMutableDictionary *userDic=[NSMutableDictionary new];
+    userDic=[userDefaults objectForKey:@"DoctorDataDic"];
+
+    _lbl_name.text = userDic[@"userName"];
+    _str_doctorID = userDic[@"id"];
+    _str_verifyCode = userDic[@"verifyCode"];
+
+    //获取是否绑定了支付宝
+    [self getZhifubaoData];
+
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    self.view.backgroundColor = kBackgroundColor;
+    [self btnStyle:_btnUnchain select:NO];
+    [self btnStyle:_btnBound select:YES];
+}
+
+#pragma mark - 判断是否绑定了支付宝
+-(void)getZhifubaoData
+{
+    //HEAD
+    NSDictionary *heads=@{RESPONSE_KEY_VERIFYCODE:_str_verifyCode};
+    //BODY
+    NSMutableDictionary *parameters=[[NSMutableDictionary alloc]init];
+    [parameters setObject:_str_doctorID forKey:@"doctorId"];
+    //GET
+    [RequestManager getWithURLString:GETPayAccount heads:heads parameters:parameters success:^(id responseObject)
+     {
+//         NSLog(@"%@",responseObject);
+         _dic_zhifubaoData = responseObject[@"value"];
+         _txt_count.text = _dic_zhifubaoData[@"payAccount"];
+         [self btnStyle:_btnBound select:NO];
+         [self btnStyle:_btnUnchain select:YES];
+         _btnBound.userInteractionEnabled = NO;
+         _txt_count.userInteractionEnabled = NO;
+         
+     } failure:^(NSError *error)
+     {
+         NSLog(@"ERROR%@",error);
+     }];
+}
+
+#pragma mark - 解除绑定
+- (IBAction)btnActionUnchain:(UIButton *)sender
+{
+    [self unchainZhifubao];
+}
+
+#pragma mark - 取消支付宝绑定请求
+-(void)unchainZhifubao
+{
+    //HEAD
+    NSDictionary *heads=@{RESPONSE_KEY_VERIFYCODE:_str_verifyCode};
+    //BODY
+    NSMutableDictionary *parameters=[[NSMutableDictionary alloc]init];
+    [parameters setObject:_dic_zhifubaoData[@"id"] forKey:@"Id"];
+//    NSLog(@"%@",parameters);
+    //GET
+    [RequestManager getWithURLString:PAYACCOUNTCANTCEL heads:heads parameters:parameters success:^(id responseObject)
+     {
+         [self btnStyle:_btnBound select:YES];
+         [self btnStyle:_btnUnchain select:NO];
+         _btnBound.userInteractionEnabled = YES;
+         _txt_count.userInteractionEnabled = YES;
+         _txt_count.text = @"";
+         _btnUnchain.userInteractionEnabled = NO;
+         [showAlertView showAlertViewWithOnlyMessage:@"成功取消绑定"];
+         
+     } failure:^(NSError *error)
+     {
+         NSLog(@"ERROR%@",error);
+     }];
+}
+
+#pragma mark - 绑定
+- (IBAction)btnActionBound:(UIButton *)sender
+{
+    if ([_txt_count.text isEqualToString:@""])
+    {
+        [showAlertView showAlertViewWithOnlyMessage:@"账号信息不能为空"];
+    }
+    else
+    {
+        [self postBoundToZhiFuBao];
+    }
+}
+
+#pragma mark - 按钮选择状态
+-(void)btnStyle:(UIButton *)btn select:(BOOL)select
+{
+    if (select==YES)
+    {
+        btn.layer.cornerRadius = 5;
+        btn.layer.masksToBounds = YES;
+        btn.backgroundColor = BLUECOLOR_STYLE;
+        [btn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        [btn.layer setBorderWidth:0];
+        [btn.layer setBorderColor:[[UIColor whiteColor] CGColor]];
+    }
+    else if (select==NO)
+    {
+        btn.layer.cornerRadius = 5;
+        btn.layer.masksToBounds = YES;
+        [btn.layer setBorderWidth:1];
+        [btn.layer setBorderColor:[[UIColor colorWithWhite:1.000 alpha:0.955] CGColor]];
+        btn.backgroundColor = [UIColor whiteColor];
+        [btn setTitleColor:[UIColor colorWithWhite:0.000 alpha:0.500] forState:UIControlStateNormal];
+        [btn.layer setBorderColor: [[UIColor colorWithWhite:0.000 alpha:0.500]CGColor]];
+    }
+}
+
+#pragma mark - 绑定
+-(void)postBoundToZhiFuBao
+{
+    //从NSUserDefaults获取身份验证秘钥
+    NSUserDefaults *userdefault=[NSUserDefaults standardUserDefaults];
+    //获取用户秘钥
+    _str_verifyCode=[userdefault objectForKey:@"verifyCode"];
+    //POST
+    //HEAD
+    NSDictionary *heads=@{RESPONSE_KEY_VERIFYCODE:_str_verifyCode};
+    //BODY
+    NSMutableDictionary *parameters=[[NSMutableDictionary alloc]init];
+    //医生ID
+    [parameters setObject:_str_doctorID forKey:@"doctorId"];
+    //支付账号
+    [parameters setObject:_txt_count.text forKey:@"payAccount"];
+    //医生姓名
+    [parameters setObject:_lbl_name.text forKey:@"Name"];
+
+    [RequestManager postWithURLString:ZHIFUBAOACCONUNT heads:heads parameters:parameters success:^(id responseObject)
+    {
+        [showAlertView showAlertViewWithMessage:@"绑定成功"];
+//        NSLog(@"%@",responseObject);
+        [self btnStyle:_btnUnchain select:YES];
+        [self btnStyle:_btnBound select:NO];
+        _btnBound.userInteractionEnabled = NO;
+        
+    } failure:^(NSError *error){
+        NSLog(@"错误 = %@",error);
+    }];
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

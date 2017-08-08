@@ -1,0 +1,267 @@
+//
+//  ReportTableViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/6/14.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "ReportTableViewController.h"
+#import "ReportTableTableViewCell.h"
+#import "PatientListrepotViewController.h"
+#import "PatientReportChatViewController.h"
+#import "PatientModel.h"
+
+@interface ReportTableViewController ()<UITableViewDelegate,UITableViewDataSource>
+{
+    MBProgressHUD *_HUD;
+}
+@end
+
+@implementation ReportTableViewController
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    
+
+    if ([_statee isEqualToString:@"0"]) {
+        NSDictionary *dic = [NSDictionary dictionaryWithObjectsAndKeys:[kUserDefatuel objectForKey:@"id"],@"doctorId",@"0",@"visState",@"",@"patientName", nil];
+        [RequestManager getWithURLStringALL:[NSString stringWithFormat:@"%@/api/Share/GetPDValidateList",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:dic success:^(id responseObject) {
+            NSMutableArray *arry = [NSMutableArray arrayWithArray:(NSArray *)responseObject];
+
+            if (arry == nil || arry.count == 0) {
+                self.noData.hidden = NO;
+            }else
+            {
+                self.noData.hidden = YES;
+            }
+            self.arryData = [self shengXuPatientConReport:arry];
+            [self.tableReport reloadData];
+        } failure:^(NSError *error) {
+            
+        }];
+    }
+    else
+    {
+        //已报到
+        NSDictionary *dic = [NSDictionary dictionaryWithObjectsAndKeys:[kUserDefatuel objectForKey:@"id"],@"doctorId",@"",@"patientName", nil];
+        [RequestManager getWithURLStringALL:[NSString stringWithFormat:@"%@/api/Share/GetPDFriendList",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:dic success:^(id responseObject) {
+            NSMutableArray *arry = [NSMutableArray arrayWithArray:(NSArray *)responseObject];
+
+            if (arry == nil || arry.count == 0) {
+                self.noData.hidden = NO;
+            }else
+            {
+                self.noData.hidden = YES;
+            }
+            self.arryData = [self shengXuPatientConReport:arry];
+            [self.tableReport reloadData];
+        } failure:^(NSError *error) {
+            
+        }];
+
+    }
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onNotifyReportPatient:) name:@"reportPatient" object:nil];
+}
+
+-(void)viewWillDisappear:(BOOL)animated{
+    [super viewWillDisappear:animated];
+    [[NSNotificationCenter defaultCenter]removeObserver:self];
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.view.backgroundColor = kBackgroundColor;
+    self.view.frame =  CGRectMake(0,0, kWith,kHeight-110-43-2);
+    
+    _tableReport =[[UITableView alloc]initWithFrame:self.view.frame];
+    _tableReport.backgroundColor = [UIColor clearColor];
+    _tableReport.dataSource = self;
+    _tableReport.separatorStyle = UITableViewCellSeparatorStyleNone;
+    _tableReport.delegate = self;
+    _tableReport.rowHeight = 71;
+    [self.view addSubview:_tableReport];
+
+    [_tableReport registerClass:[ReportTableTableViewCell class] forCellReuseIdentifier:@"ReportTab"];
+    
+    MJRefreshNormalHeader *header = [MJRefreshNormalHeader headerWithRefreshingTarget:self refreshingAction:@selector(pullDownReport)];
+    [header setTitle:@"正在加载数据" forState:MJRefreshStateRefreshing];
+    self.tableReport.mj_header = header;
+}
+
+-(void)dealloc{
+
+}
+
+-(void)pullDownReport{
+
+    if ([_statee isEqualToString:@"0"]) {
+        NSDictionary *dic = [NSDictionary dictionaryWithObjectsAndKeys:[kUserDefatuel objectForKey:@"id"],@"doctorId",@"0",@"visState",@"",@"patientName", nil];
+        [RequestManager getWithURLStringALL:[NSString stringWithFormat:@"%@/api/Share/GetPDValidateList",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:dic success:^(id responseObject) {
+            NSMutableArray *arry = [NSMutableArray arrayWithArray:(NSArray *)responseObject];
+
+            if (arry == nil || arry.count == 0) {
+                self.noData.hidden = NO;
+            }else
+            {
+                self.noData.hidden = YES;
+            }
+            self.arryData = [self shengXuPatientConReport:arry];
+            [self.tableReport reloadData];
+        } failure:^(NSError *error) {
+            
+        }];
+
+    }
+    else
+    {
+        NSDictionary *dic = [NSDictionary dictionaryWithObjectsAndKeys:[kUserDefatuel objectForKey:@"id"],@"doctorId",@"",@"patientName", nil];
+        [RequestManager getWithURLStringALL:[NSString stringWithFormat:@"%@/api/Share/GetPDFriendList",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:dic success:^(id responseObject) {
+            NSMutableArray *arry = [NSMutableArray arrayWithArray:(NSArray *)responseObject];
+
+            if (arry == nil || arry.count == 0) {
+                self.noData.hidden = NO;
+            }else
+            {
+                self.noData.hidden = YES;
+            }
+            self.arryData = [self shengXuPatientConReport:arry];
+            [self.tableReport reloadData];
+
+        } failure:^(NSError *error) {
+            
+        }];
+
+    }
+    [_tableReport.mj_header endRefreshing];
+
+}
+
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return _arryData.count;
+}
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+
+    ReportTableTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"ReportTab" forIndexPath:indexPath];
+    NSDictionary *dic = _arryData[indexPath.row];
+    [cell setPatientData:dic state:_statee];
+    return cell;
+}
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    NSDictionary *dic = _arryData[indexPath.row];
+
+    if ([_statee isEqualToString:@"0"]) {
+        PatientListrepotViewController *list = [[PatientListrepotViewController alloc]init];
+        list.patientID = [dic objectForKey:@"patientId"];
+        [self.navigationController pushViewController:list animated:YES];
+    }else{
+    
+        PatientReportChatViewController *chat = [[PatientReportChatViewController alloc]init];
+        chat.patientDoc = dic;
+        chat.from = @"report";
+        [self.navigationController pushViewController:chat animated:YES];
+    }
+}
+
+-(void)onNotifyReportPatient:(NSNotification *)notify{
+    
+    if (![_statee isEqualToString:@"0"]) {
+        return;
+    }
+    ReportTableTableViewCell *cell = notify.object;
+    NSIndexPath *index = [_tableReport indexPathForCell:cell];
+    NSDictionary *dicData = _arryData[index.row];
+
+    NSDictionary *dic = [NSDictionary dictionaryWithObjectsAndKeys:[kUserDefatuel objectForKey:@"id"],@"doctorId",[dicData objectForKey:@"patientId"],@"patientId",[dicData objectForKey:@"validateId"],@"validateId", nil];
+
+    _HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    _HUD.mode = MBProgressHUDModeIndeterminate;
+    _HUD.labelText = @"正在加载";
+    _HUD.hidden = NO;
+    [RequestManager getWithURLStringALL:[NSString stringWithFormat:@"%@/api/Share/PDFriendUpdate",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:dic success:^(id responseObject) {
+        _HUD.hidden = YES;
+        NSDictionary *dic = [NSDictionary dictionaryWithObjectsAndKeys:[kUserDefatuel objectForKey:@"id"],@"doctorId",@"0",@"visState",@"",@"patientName", nil];
+        [RequestManager getWithURLStringALL:[NSString stringWithFormat:@"%@/api/Share/GetPDValidateList",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:dic success:^(id responseObject) {
+            _HUD.hidden = YES;
+            
+            NSMutableArray *arry = [NSMutableArray arrayWithArray:(NSArray *)responseObject];
+            
+            if (arry == nil || arry.count == 0) {
+                self.noData.hidden = NO;
+            }else
+            {
+                self.noData.hidden = YES;
+            }
+            self.arryData = [self shengXuPatientConReport:arry];
+            [self.tableReport reloadData];
+        } failure:^(NSError *error) {
+            _HUD.hidden = YES;
+        }];
+
+    } failure:^(NSError *error) {
+        _HUD.hidden = YES;
+    }];
+}
+
+//未读变已读
+-(void)isRead{
+    NSMutableDictionary *Dic = [[NSMutableDictionary alloc]init];
+    
+    [Dic setObject:kDoctorIM forKey:@"toAccount"];
+    [RequestManager getWithURLStringALL:[NSString stringWithFormat:@"%@/api/Share/SetMessageIsRead",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:Dic success:^(id responseObject) {
+        
+    } failure:^(NSError *error) {
+        
+    }];
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+
+}
+
+#pragma mark--------升序
+-(NSMutableArray *)shengXuPatientConReport:(NSArray *)arry{
+    NSDateFormatter *dateFormatter = [NSDateFormatter new];
+    if ([_statee isEqualToString:@"0"]) {
+        dateFormatter.dateFormat = @"yyyy-MM-dd";
+    }else
+    {
+        dateFormatter.dateFormat = @"yyyy-MM-dd HH:mm:ss";
+    }
+    
+    NSMutableArray * array = [NSMutableArray arrayWithArray:[arry sortedArrayUsingComparator:^NSComparisonResult(NSDictionary *modelM1, NSDictionary *modelM2) {
+        NSDate *date1 = [dateFormatter dateFromString:[self getDate:modelM1]];
+        NSDate *date2 = [dateFormatter dateFromString:[self getDate:modelM2]];
+        
+        NSComparisonResult result = [date2 compare:date1];
+        return result == NSOrderedDescending;
+    }]];
+    return array;
+}
+
+-(NSString *)getDate:(NSDictionary *)dic{
+
+    if ([dic objectForKey:@"latestDate"]) {
+        return [dic objectForKey:@"latestDate"];
+    }else
+    {
+        return [dic objectForKey:@"treatmentDate"];
+    }
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

@@ -1,0 +1,50 @@
+//
+//  KCommandTableViewCell.m
+//  HuaxiaDotor
+//
+//  Created by kock on 16/6/1.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "KCommandTableViewCell.h"
+
+@implementation KCommandTableViewCell
+
+- (void)awakeFromNib {
+    // Initialization code
+}
+
+-(void)setCell:(NSDictionary *)dic
+{
+    NSString *imageUrl = dic[@"picFileName"];
+    imageUrl=[NSString stringWithFormat:@"%@%@",NET_URLSTRING,imageUrl];
+    NSString *strUrl=[imageUrl stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    [_image_head sd_setImageWithURL:[NSURL URLWithString:strUrl]];
+    _image_head.layer.cornerRadius = _image_head.frame.size.height/2;
+    _image_head.layer.masksToBounds = YES;
+    _lbl_time.text = dic[@"createDate"];
+    _lbl_name.text = dic[@"userName"];
+    
+    if (![dic objectForKey:@"reviewerName"])
+    {
+        _lbl_info.text = dic[@"commentDetail"];
+    }
+    else
+    {
+        NSString *str_info;
+        NSString *str_name = dic[@"reviewerName"];
+        str_info = [NSString stringWithFormat:@"回复%@: %@",str_name,dic[@"commentDetail"]];
+        NSMutableAttributedString *str_talk = [[NSMutableAttributedString alloc]initWithString:str_info];
+        [str_talk addAttributes:[NSDictionary dictionaryWithObjectsAndKeys:BLUECOLOR_STYLE, NSForegroundColorAttributeName, nil] range:NSMakeRange(2, str_name.length)];
+        _lbl_info.attributedText = str_talk;
+        //        NSLog(@"%@",_lbl_info.attributedText);
+    }
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+    
+    // Configure the view for the selected state
+}
+
+@end

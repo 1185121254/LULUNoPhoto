@@ -1,0 +1,751 @@
+//
+//  HomeToolController.m
+//  dawnEye
+//
+//  Created by KockPeter on 16/3/8.
+//  Copyright © 2016年 kockPeter. All rights reserved.
+//  
+
+#import "HomeToolController.h"
+#import "HomeViewController.h"
+#import "HomeView.h"
+//新增患者页面
+//#import "AddPatientTableViewController.h"
+#import "NewPatientScViewController.h"
+//门诊记录页面
+#import "OutPatienrRecordViewController.h"
+//加号管理
+#import "AddManagerViewController.h"
+//患者报道页面
+#import "PatientRepotViewController.h"
+//工具箱页面
+#import "ToolViewController.h"
+//学术前沿
+#import "AcademicFrontViewController.h"
+//群发通知
+#import "MassNoticeViewController.h"
+//停诊通知
+#import "StopDiagnosisViewController.h"
+//图文咨询
+#import "ConsultingViewController.h"
+//电话咨询
+#import "PhoneViewController.h"
+//视频咨询
+#import "SettingViewController.h"
+#import "VideoTableViewController.h"
+//在线管理
+#import "GeneralViewController.h"
+//义诊发布
+#import "HillFreeViewController.h"
+//互联网会诊
+#import "WebLineViewController.h"
+//病例讨论
+#import "CaseDiscussViewController.h"
+//医嘱
+#import "DoctorAdviceViewController.h"
+//通讯录
+#import "AddressListViewController.h"
+//免费咨询
+#import "FreeConsultViewController.h"
+//医生助理
+#import "DocAssistantViewController.h"
+//电子病历
+#import "ElectronPatientViewController.h"
+//学术前沿
+#import "WebViewController.h"
+
+@implementation HomeToolController
+
+-(void)viewDidLoad
+{
+    [super viewDidLoad];
+    [self createAdView];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(presentView:) name:@"PresentView" object:nil];
+    
+    _isNetNomal = YES;
+    //图文
+    self.UnReadMsg.layer.cornerRadius = 8;
+    self.UnReadMsg.layer.masksToBounds = YES;
+    self.UnReadMsg.hidden = YES;
+    //患者报道
+    self.patientReportUnReadMs.layer.cornerRadius = 8;
+    self.patientReportUnReadMs.layer.masksToBounds = YES;
+    self.patientReportUnReadMs.hidden = YES;
+    //通讯录
+    self.addressUnReadMsg.layer.cornerRadius = 8;
+    self.addressUnReadMsg.layer.masksToBounds = YES;
+    self.addressUnReadMsg.hidden = YES;
+    //免费咨询
+    self.freeUnReadMsg.layer.cornerRadius = 8;
+    self.freeUnReadMsg.layer.masksToBounds = YES;
+    self.freeUnReadMsg.hidden = YES;
+    //病例讨论
+    self.caseConUnReadMsg.layer.cornerRadius = 8;
+    self.caseConUnReadMsg.layer.masksToBounds = YES;
+    self.caseConUnReadMsg.hidden = YES;
+    //电话
+    self.phoneUnRead.hidden = YES;
+    //视频
+    self.viedoUnread.hidden = YES;
+}
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    self.tabBarController.tabBar.hidden = NO;
+
+    if (_isNetNomal == NO) {
+        [self createAdView];
+    }
+    
+    if ([self isCertificate]) {
+        [self unreadMsgCount];
+    }else
+    {
+        [self unreadHidden];
+    }
+}
+
+-(void)viewDidAppear:(BOOL)animated
+{
+    //调用滚动视图
+    [super viewDidAppear:animated];
+    
+}
+
+#pragma mark---------点击状态栏的推送
+-(void)presentView:(NSNotification *)notify{
+    
+    NSDictionary *dic = notify.object;
+    if (dic) {
+        
+        if ([[dic objectForKey:@"type"] integerValue] == 1) {
+            
+            if (![self.navigationController.viewControllers.lastObject isKindOfClass:[WebViewController class]]) {
+                WebViewController *web = [[WebViewController alloc]init];
+                web.urlStr = dic[@"url"];
+                web.isCollectisShow = YES;
+                web.CollectID = dic[@"id"];
+                web.CollectTitle = dic[@"title"];
+                [self.navigationController pushViewController:web animated:YES];
+            }
+        }
+        else
+        {
+            if (![self.navigationController.viewControllers.lastObject isKindOfClass:[HomeViewController class]]) {
+                
+                [self.navigationController popToRootViewControllerAnimated:YES];
+                
+            }else
+            {
+                if ([self isCertificate]) {
+                    [self unreadMsgCount];
+                }else
+                {
+                    [self unreadHidden];
+                }
+            }
+        }
+    }
+}
+
+-(void)unreadHidden{
+    self.UnReadMsg.hidden = YES;
+    self.freeUnReadMsg.hidden = YES;
+    self.addressUnReadMsg.hidden = YES;
+    self.caseConUnReadMsg.hidden = YES;
+    self.patientReportUnReadMs.hidden = YES;
+    self.phoneUnRead.hidden = YES;
+    self.viedoUnread.hidden = YES;
+}
+
+#pragma mark - 未读消息数目
+-(void)unreadMsgCount{
+    //图文资讯
+    NSDictionary *dic = @{@"doctorIM":kDoctorIM,@"source":@""};
+    [RequestManager getWithURLStringALL:[NSString stringWithFormat:@"%@/api/Share/GetChatCount",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:dic viewConroller:self success:^(id responseObject) {
+        
+        NSArray *array = (NSArray *)responseObject;
+        if (array) {
+            for (NSDictionary *dicValue in array) {
+                [self unReadMsg:dicValue];
+            }
+        }
+        [self getPhoneUnRead];
+    } failure:^(NSError *error) {
+        _isNetNomal = NO;
+    }];
+}
+
+-(void)unReadMsg:(NSDictionary *)dic{
+
+    switch ([[dic objectForKey:@"source"] integerValue]) {
+        case 1:
+        {
+            [self showUnReadCount:[[dic objectForKey:@"count"] integerValue] Lable:self.UnReadMsg];
+        }
+            break;
+        case 2:
+        {
+            [self showUnReadCount:[[dic objectForKey:@"count"] integerValue] Lable:self.freeUnReadMsg];
+
+        }
+            break;
+        case 3:
+        {
+            [self showUnReadCount:[self casePatientUnRead] Lable:self.caseConUnReadMsg];
+
+        }
+            break;
+        case 4:
+        {
+            [self showUnReadCount:[[dic objectForKey:@"count"] integerValue] Lable:self.patientReportUnReadMs];
+
+        }
+            break;
+        case 5:
+        {
+            [self showUnReadCount:[[dic objectForKey:@"count"] integerValue] Lable:self.addressUnReadMsg];
+
+        }
+            break;
+        case 8:
+        {
+            [self showUnReadCount:[[dic objectForKey:@"count"] integerValue] Lable:self.phoneUnRead];
+            
+        }
+            break;
+        case 9:
+        {
+            [self showUnReadCount:[[dic objectForKey:@"count"] integerValue] Lable:self.viedoUnread];
+            
+        }
+            break;
+        default:
+            break;
+    }
+    
+}
+
+-(NSInteger)casePatientUnRead{
+    NSInteger count = 0;
+    for (NIMRecentSession *recentSession in [NIMSDK sharedSDK].conversationManager.allRecentSessions) {
+        
+        if (recentSession.session.sessionType == NIMSessionTypeTeam) {
+            count += recentSession.unreadCount;
+        }
+    }
+    
+    if (count > 99) {
+        count = 99;
+    }
+    
+    return count;
+}
+
+-(void)showUnReadCount:(NSInteger)count Lable:(UILabel *)lbl{
+    if (count == 0) {
+        lbl.hidden = YES;
+    }else
+    {
+        lbl.text = [NSString stringWithFormat:@"%ld",count];
+        lbl.hidden = NO;
+    }
+}
+#pragma mark - 获取电话未读
+
+-(void)getPhoneUnRead{
+    NSDictionary *para = @{@"doctorId":[kUserDefatuel objectForKey:@"id"]};
+    [RequestManager getWithURLStringALL:[NSString stringWithFormat:@"%@/api/Share/GetPendingOrder",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:para viewConroller:self success:^(id responseObject) {
+        NSArray *array = (NSArray *)responseObject;
+        if (array) {
+            for (NSDictionary *dicValue in array) {
+                [self unReadMsg:dicValue];
+            }
+        }
+        [self zhanNei];
+    } failure:^(NSError *error) {
+    
+    }];
+}
+
+#pragma mark - 站内消息
+-(void)zhanNei{
+    [RequestManager postWithURLStringALL:[NSString stringWithFormat:@"%@/api/Share/GetMessageCountByDoc",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:@{} viewConroller:self success:^(id responseObject, BOOL ifTimeout) {
+        
+        HomeView *home = (HomeView *)self.parentViewController;
+        if ([responseObject integerValue]==0||responseObject==nil) {
+            home.readNum.hidden = YES;
+        }
+        else
+        {
+            home.readNum.hidden = NO;
+            home.readNum.text = [NSString stringWithFormat:@"%ld",[responseObject integerValue]];
+        }
+    } failure:^(NSError *error) {
+        
+    }];
+}
+
+#pragma mark - 创建滚动视图
+-(void)createAdView
+{
+    //滚动广告地址
+
+    NSDictionary *dic = @{@"ShufflingId":@"5"};
+    _arryImageURL = [NSMutableArray array];
+    
+    [RequestManager postWithURLStringALL:[NSString stringWithFormat:@"%@/api/Patient/GetSiteShuffling",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:dic viewConroller:self success:^(id responseObject, BOOL ifTimeout) {
+
+        for (NSDictionary *dic in (NSArray *)responseObject) {
+            NSString *url = [NSString stringWithFormat:@"%@%@",NET_URLSTRING,[dic objectForKey:@"address"]];
+            [_arryImageURL addObject:url];
+        }
+        [self setImage:_arryImageURL];
+        _isNetNomal = YES;
+    } failure:^(NSError *error) {
+
+        _isNetNomal = NO;
+    }];
+
+}
+
+-(void)setImage:(NSMutableArray *)arry{
+    self.adview = [AdView adScrollViewWithFrame:CGRectMake(0, 0, SCREEN_W,self.adViewCell.frame.size.height) imageLinkURL:arry placeHoderImageName:@"ad1" pageControlShowStyle:UIPageControlShowStyleCenter];
+    [self.adViewCell addSubview:self.adview];
+}
+
+#pragma mark - 图文咨询
+- (IBAction)btnConsulting:(id)sender {
+
+    if ([self NIMSDKisNomal]) {
+        return;
+    }
+    if ([self isCertificate]) {
+        NSDictionary *dic = [kUserDefatuel objectForKey:@"VasSet0"];
+        
+        if ([[dic objectForKey:@"isOpen"] isEqualToString:@"True"]) {
+            //已经开通
+            //创建图文咨询
+            UIStoryboard *consultingStory=[UIStoryboard storyboardWithName:@"Consulting" bundle:[NSBundle mainBundle]];
+            //指定对应的故事版
+            ConsultingViewController *consulting = [consultingStory instantiateViewControllerWithIdentifier:@"consultingView"];
+            [self.navigationController pushViewController:consulting animated:YES];
+        }
+        else
+        {
+            GeneralViewController *gener = [[GeneralViewController alloc]init];
+            gener.from = @"con";
+            [self.navigationController pushViewController:gener animated:YES];
+        }
+
+    }else{
+        IsCertificateViewController *isCer = [[IsCertificateViewController alloc]init];
+        isCer.from = @"图文咨询";
+        [self.navigationController pushViewController:isCer animated:YES];
+    }
+}
+
+#pragma mark - 电话咨询
+
+- (IBAction)btnPhone:(id)sender {
+    //云信是否连通
+    if ([self NIMSDKisNomal]) {
+        return;
+    }
+    if ([self isCertificate]) {
+        NSDictionary *dic = [kUserDefatuel objectForKey:@"VasSet1"];
+        if ([[dic objectForKey:@"isOpen"] isEqualToString:@"True"]) {
+            //已经开通
+            //创建电话咨询
+            PhoneViewController *phine = [[PhoneViewController alloc]init];
+            [self.navigationController pushViewController:phine animated:YES];
+        }
+        else
+        {
+            GeneralViewController *gener = [[GeneralViewController alloc]init];
+            gener.from = @"phone";
+            [self.navigationController pushViewController:gener animated:YES];
+        }
+
+    }else
+    {
+        IsCertificateViewController *isCer = [[IsCertificateViewController alloc]init];
+        isCer.from = @"电话咨询";
+        [self.navigationController pushViewController:isCer animated:YES];
+    }
+    
+}
+
+#pragma mark - 视频咨询
+- (IBAction)btnVideo:(id)sender {
+    //云信是否连通
+    if ([self NIMSDKisNomal]) {
+        return;
+    }
+    if ([self isCertificate]) {
+        NSDictionary *dic = [kUserDefatuel objectForKey:@"VasSet2"];
+        if ([[dic objectForKey:@"isOpen"] isEqualToString:@"True"]) {
+            //已经开通
+            //创建视频咨询
+            [self viedo];
+        }
+        else
+        {
+            GeneralViewController *gener = [[GeneralViewController alloc]init];
+            gener.from = @"viedo";
+            [self.navigationController pushViewController:gener animated:YES];
+            
+        }
+
+    }else
+    {
+        IsCertificateViewController *isCer = [[IsCertificateViewController alloc]init];
+        isCer.from = @"视频咨询";
+        [self.navigationController pushViewController:isCer animated:YES];
+    }
+}
+
+
+-(void)viedo{
+    NSMutableDictionary *dicP = [NSMutableDictionary dictionary];
+    
+    [dicP setObject:[kUserDefatuel objectForKey:@"id"] forKey:@"doctorId"];
+
+    [RequestManager startViedoChat:[NSString stringWithFormat:@"%@/api/Share/GetServiceRecord",NET_URLSTRING] Parameters:dicP viewConroller:self Complation:^(NSString *xtrId, NSNumber *serviceAmount, NSNumber *isFree, NSNumber *code) {
+
+        if (code != nil) {
+            //未开启
+            UIAlertController *alter = [UIAlertController alertControllerWithTitle:@"提示" message:@"是否确定现在开启视频咨询" preferredStyle:UIAlertControllerStyleAlert];
+            [alter addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleDefault handler:nil]];
+            [alter addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+                SettingViewController *viw = [[SettingViewController alloc]init];
+                [self.navigationController pushViewController:viw animated:YES];
+            }]];
+            [self presentViewController:alter animated:YES completion:nil];
+        }
+        else
+        {
+            VideoTableViewController *viedo = [[VideoTableViewController alloc]init];
+            viedo.xtrID = xtrId;
+            [self.navigationController pushViewController:viedo animated:YES];
+        }
+
+    } Fail:^(NSError *error) {
+
+        kAlter(kFail);
+    }];
+}
+
+#pragma mark - 新增患者 弹出新增患者的页面
+- (IBAction)btnAddPation:(UIButton *)sender
+{
+    NewPatientScViewController *newPatient = [[NewPatientScViewController alloc]init];
+    [self.navigationController pushViewController:newPatient animated:YES];
+    
+//    //创建新增患者界面
+//    UIStoryboard *addPtationView=[UIStoryboard storyboardWithName:@"AddPatient" bundle:[NSBundle mainBundle]];
+//    //指定对应的故事版
+//    AddPatientTableViewController *addtableview=[addPtationView instantiateViewControllerWithIdentifier:@"addPatientView"];
+//    [self.navigationController pushViewController:addtableview animated:YES];
+}
+
+#pragma mark - 加号管理 弹出加号管理页面
+- (IBAction)AddManager:(UIButton *)sender
+{
+    if ([self isCertificate]) {
+        NSDictionary *dic = [kUserDefatuel objectForKey:@"VasSet3"];
+        if ([[dic objectForKey:@"isOpen"] isEqualToString:@"True"]) {
+            //创建新增患者界面
+            UIStoryboard *addManager=[UIStoryboard storyboardWithName:@"AddManager" bundle:[NSBundle mainBundle]];
+            //指定对应的故事版
+            AddManagerViewController *addManagerview=[addManager instantiateViewControllerWithIdentifier:@"AddManagerView"];
+            [self.navigationController pushViewController:addManagerview animated:YES];
+        }
+        else
+        {
+            GeneralViewController *gener = [[GeneralViewController alloc]init];
+            gener.from = @"addA";
+            [self.navigationController pushViewController:gener animated:YES];
+        }
+    }else
+    {
+        IsCertificateViewController *isCer = [[IsCertificateViewController alloc]init];
+        isCer.from = @"加号管理";
+        [self.navigationController pushViewController:isCer animated:YES];
+    }
+}
+
+#pragma mark - 门诊记录 弹出门诊记录页面
+- (IBAction)OutpatientrRecondBtn:(UIButton *)sender
+{
+    if ([self isCertificate]) {
+        //创建新增患者界面
+        UIStoryboard *outPatientRecond=[UIStoryboard storyboardWithName:@"OutpatientrRecord" bundle:[NSBundle mainBundle]];
+        OutPatienrRecordViewController *outPtientRecondView=[outPatientRecond instantiateViewControllerWithIdentifier:@"OutpatientrRecord"];
+        outPtientRecondView.from = @"Home";
+        [self.navigationController pushViewController:outPtientRecondView animated:YES];
+    }else
+    {
+        IsCertificateViewController *isCer = [[IsCertificateViewController alloc]init];
+        isCer.from = @"门诊记录";
+        [self.navigationController pushViewController:isCer animated:YES];
+    }
+
+}
+
+#pragma mark - 工具箱页面 弹出工具箱页面
+- (IBAction)Tool:(UIButton *)sender
+{
+    ToolViewController *tool = [[ToolViewController alloc]init];
+    [self.navigationController pushViewController:tool animated:YES];
+}
+
+#pragma mark - 学术前沿 弹出学术前沿页面
+- (IBAction)AcademicThatButton:(UIButton *)sender
+{
+    AcademicFrontViewController *front = [[AcademicFrontViewController alloc]init];
+    [self.navigationController pushViewController:front animated:YES];
+}
+
+#pragma mark - 群发通知 弹出群发通知页面
+- (IBAction)massNotice:(UIButton *)sender
+{
+    if ([self isCertificate]) {
+        UIStoryboard *storyBoard = [UIStoryboard storyboardWithName:@"MASS" bundle:[NSBundle mainBundle]];
+        MassNoticeViewController *massNoticeView =[storyBoard instantiateViewControllerWithIdentifier:@"massNotice"];
+        [self.navigationController pushViewController:massNoticeView animated:YES];
+    }else
+    {
+        IsCertificateViewController *isCer = [[IsCertificateViewController alloc]init];
+        isCer.from = @"群发通知";
+        [self.navigationController pushViewController:isCer animated:YES];
+    }
+
+}
+
+#pragma mark - 停诊通知 弹出停诊通知页面
+- (IBAction)stopDiagnose:(UIButton *)sender
+{
+    if ([self isCertificate]) {
+        UIStoryboard *storyBoard = [UIStoryboard storyboardWithName:@"StopDiagnosis" bundle:[NSBundle mainBundle]];
+        StopDiagnosisViewController *stopView = [storyBoard instantiateViewControllerWithIdentifier:@"StopDiagnosis"];
+        [self.navigationController pushViewController:stopView animated:YES];
+    }else
+    {
+        IsCertificateViewController *isCer = [[IsCertificateViewController alloc]init];
+        isCer.from = @"停诊通知";
+        [self.navigationController pushViewController:isCer animated:YES];
+    }
+
+}
+
+#pragma mark - 免费咨询 弹出平台消息页面
+- (IBAction)TerraceMassage:(UIButton *)sender
+{
+    //云信是否连通
+    if ([self NIMSDKisNomal]) {
+        return;
+    }
+    if ([self isCertificate]) {
+        FreeConsultViewController *free = [[FreeConsultViewController alloc]init];
+        [self.navigationController pushViewController:free animated:YES];
+    }else
+    {
+        IsCertificateViewController *isCer = [[IsCertificateViewController alloc]init];
+        isCer.from = @"免费咨询";
+        [self.navigationController pushViewController:isCer animated:YES];
+    }
+}
+
+#pragma mark - 义诊发布
+- (IBAction)pbulishFreeHill:(id)sender {
+    if ([self isCertificate]) {
+        HillFreeViewController *hill = [[HillFreeViewController alloc]init];
+        [self.navigationController pushViewController:hill animated:YES];
+    }else
+    {
+        IsCertificateViewController *isCer = [[IsCertificateViewController alloc]init];
+        isCer.from = @"义诊发布";
+        [self.navigationController pushViewController:isCer animated:YES];
+    }
+}
+
+#pragma mark - 互联网会诊
+- (IBAction)webClinic:(id)sender
+{
+    if ([self isCertificate]) {
+        //创建新增患者界面
+        UIStoryboard *storyboardName=[UIStoryboard storyboardWithName:@"WebLine" bundle:[NSBundle mainBundle]];
+        //指定对应的故事版
+        WebLineViewController *webView=[storyboardName instantiateViewControllerWithIdentifier:@"WebLineViewController"];
+        //推送
+        [self.navigationController pushViewController:webView animated:YES];
+    }else
+    {
+        IsCertificateViewController *isCer = [[IsCertificateViewController alloc]init];
+        isCer.from = @"互联网会诊";
+        [self.navigationController pushViewController:isCer animated:YES];
+    }
+}
+#pragma mark - 病例讨论
+
+- (IBAction)btnCaseDiscuss:(id)sender {
+    //云信是否连通
+    if ([self NIMSDKisNomal]) {
+        return;
+    }
+    if ([self isCertificate]) {
+        CaseDiscussViewController *caseD = [[CaseDiscussViewController alloc]init];
+        [self.navigationController pushViewController:caseD animated:YES];
+    }else
+    {
+        IsCertificateViewController *isCer = [[IsCertificateViewController alloc]init];
+        isCer.from = @"病历讨论";
+        [self.navigationController pushViewController:isCer animated:YES];
+    }
+}
+
+#pragma mark - 医嘱
+- (IBAction)doctorAdvice:(id)sender {
+    if ([self  isCertificate]) {
+        DoctorAdviceViewController *doctor = [[DoctorAdviceViewController alloc]init];
+        doctor.from = @"DocAdvice";
+        [self.navigationController pushViewController:doctor animated:YES];
+    }else
+    {
+        IsCertificateViewController *isCer = [[IsCertificateViewController alloc]init];
+        isCer.from = @"医嘱";
+        [self.navigationController pushViewController:isCer animated:YES];
+    }
+}
+
+#pragma mark - 电子病历
+- (IBAction)onBtnElectron:(id)sender {
+    
+    if ([self isCertificate]) {
+        ElectronPatientViewController *electron = [[ElectronPatientViewController alloc]init];
+        [self.navigationController pushViewController:electron animated:YES];
+    }else
+    {
+        IsCertificateViewController *isCer = [[IsCertificateViewController alloc]init];
+        isCer.from = @"电子病历";
+        [self.navigationController pushViewController:isCer animated:YES];
+    }
+
+}
+
+#pragma mark - 患者报道
+- (IBAction)onBtnPatientReport:(id)sender {
+    //云信是否连通
+    if ([self NIMSDKisNomal]) {
+        return;
+    }
+    if ([self isCertificate]) {
+        PatientRepotViewController *report = [[PatientRepotViewController alloc]init];
+        [self.navigationController pushViewController:report animated:YES];
+    }else
+    {
+        IsCertificateViewController *isCer = [[IsCertificateViewController alloc]init];
+        isCer.from = @"患者报到";
+        [self.navigationController pushViewController:isCer animated:YES];
+    }
+}
+
+#pragma mark - 通讯录
+- (IBAction)btnAdressList:(id)sender {
+    //云信是否连通
+    
+    if ([self NIMSDKisNomal]) {
+        return;
+    }
+    AddressListViewController *address = [[AddressListViewController alloc]init];
+    [self.navigationController pushViewController:address animated:YES];
+}
+
+#pragma mark - 医生助理
+- (IBAction)DocAssiatant:(id)sender {
+    
+    DocAssistantViewController *DocAssis = [[DocAssistantViewController alloc]init];
+    [self.navigationController pushViewController:DocAssis animated:YES];
+    
+}
+
+//设置组头的高度
+-(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section
+{
+    //第一行,组头为0
+    if (section==0)
+    {
+        return CGFLOAT_MIN;
+        return tableView.sectionHeaderHeight;
+    }
+    //其他行数,组头为最小值
+    return CGFLOAT_MIN;
+    return tableView.sectionHeaderHeight;
+}
+
+// 设置组尾的高度
+-(CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section
+{
+    return 10;
+}
+
+//静态表格的cell高度
+-(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    //图文电话视屏按钮
+    if (indexPath.section==0)
+    {
+        return 94;
+    }
+    //常用工具
+    if (indexPath.section==1)
+    {
+        return self.view.frame.size.width/1.6;
+    }
+    //辅助工具
+    if (indexPath.section==3)
+    {
+        return self.view.frame.size.width/1.6;
+    }
+    //滚动广告
+    return 100;
+}
+
+#pragma mark-----是否认证
+-(BOOL)isCertificate{
+
+    NSDictionary *dicLog = [kUserDefatuel objectForKey:@"DoctorDataDic"];
+    if ([[dicLog objectForKey:@"state"] integerValue]==2) {
+        return YES;
+    }
+    else
+    {
+        return NO;
+    }
+}
+
+#pragma mark-----云信是否正常
+-(BOOL)NIMSDKisNomal{
+
+    if ([[NIMSDK sharedSDK].loginManager isLogined]==NO) {
+        kAlter(kSystemUpdate);
+        return YES;
+    }
+    return NO;
+}
+
+@end
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,195 @@
+//
+//  RequestManager.h
+//  HuaxiaDotor
+//
+//  Created by kock on 16/3/21.
+//  Copyright © 2016年 kock. All rights reserved.
+//  网络请求处理文件
+
+#import <Foundation/Foundation.h>
+#import "AFNetworking.h"
+#import "PatientDetailModel.h"
+#import "AdviewDetail.h"
+
+
+@interface RequestManager : NSObject
+/**
+ *  简单 POST 请求 返回字典 有成功失败
+ *
+ *  @param url        请求地址
+ *  @param parameters 参数
+ *  @param success    请求成功回调
+ *  @param failure    请求失败回调
+ */
++(void)postWithURLString:(NSString *)url
+              parameters:(id)parameters
+                 success:(void(^)(id responseObject))success
+                 failure:(void(^)(NSError *error))failure;
+
+/**
+ *  POST 请求 (包括HEAD)
+ *
+ *  @param url        请求网址
+ *  @param heads      头文件
+ *  @param parameters 参数
+ *  @param shhuccess  请求成功回调
+ *  @param failure    请求失败回调
+ */
++(void)postWithURLString:(NSString *)url
+                   heads:(NSDictionary *)heads
+              parameters:(id)parameters
+                 success:(void(^)(id responseObject))success
+                 failure:(void(^)(NSError *error))failure;
+
+
+/**
+ *  GET 请求 (包含HEAD)
+ *
+ *  @param url        请求网址
+ *  @param heads      头文件
+ *  @param parameters 参数
+ *  @param success    请求成功回调
+ *  @param failure    请求失败回调
+ */
++(void)getWithURLString:(NSString *)url
+                  heads:(NSDictionary *)heads
+             parameters:(id)parameters
+                success:(void(^)(id responseObject))success
+                failure:(void(^)(NSError *error))failure;
+
+//医生获得患者列表
++(void)getTextOrderListURL:(NSString *)url heads:(NSDictionary *)heads parameters:(id)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail;
+
+
+//修改支付状态
++(void)modificationOrderState:(NSString *)url parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *code))complation Fail:(void(^)(NSError *error))fail;
+
+//建议检查项目
++(void)checkProgram:(NSString *)url parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail;
+
+
+//建议用药
++(void)useMedic:(NSString *)url parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail;
+
+//获得患者详情
++(void)getPatientDetail:(NSString *)url parameters:(NSDictionary *)parameters Complation:(void(^)(PatientDetailModel *patient))complation Fail:(void(^)(NSError *error))fail;
+
+
+//获得诊断建议
++(void)getDoctorAdviceURL:(NSString *)url parameters:(id)parameters Complation:(void(^)(AdviewDetail *adview))complation Fail:(void(^)(NSError *error))fail;
+
+
+//发表诊断建议
++(void)publishAdviceURL:(NSString *)url parameters:(NSDictionary *)parameters Complation:(void(^)(NSDictionary *dicData))complation Fail:(void(^)(NSError *error))fail;
+
+//获取排班表
++(void)getRoster:(NSString *)url parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail;
+
+//设置排班表
++(void)setRoster:(NSString *)url parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *mess))complation Fail:(void(^)(NSError *error))fail;
+
+//电话咨询列表
++(void)getPatientPhoneList:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail;
+
+//拨打患者电话
++(void)callPatient:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *code,NSString *msg))complation Fail:(void(^)(NSError *error))fail;
+
+//判断是否开启视频问诊
++(void)startViedoChat:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSString *xtrId,NSNumber *serviceAmount,NSNumber *isFree,NSNumber *code))complation  Fail:(void(^)(NSError *error))fail;
+
+//开启视频问诊
++(void)settingPublick:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *code,NSString *xtstr))complation Fail:(void(^)(NSError *error))fail;
+
+//加号
++(void)addViedo:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail;
+
+//加号同意/拒绝
++(void)agreeOrRefuse:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *code))complation Fail:(void(^)(NSError *error))fail;
+
+//关诊
++(void)closeDino:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *code))complation Fail:(void(^)(NSError *error))fail;
+
+//开通在线服务
++(void)DregerOnLine:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *code))complation Fail:(void(^)(NSError *error))fail;
+
+//关闭在线服务
++(void)CloseOnLine:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *code))complation Fail:(void(^)(NSError *error))fail;
+
+//获取义诊
++(void)publishFreeDiagnose:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *array))complation Fail:(void(^)(NSError *error))fail;
+
+//公用
++(void)publishFreeHill:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *code))complation Fail:(void(^)(NSError *error))fail;
+
+//获取互联网会诊列表
+//+(void)getListWebClinic:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *array))complation;
+
+//病例讨论列表
++(void)CaseList:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *array))complation Fail:(void(^)(NSError *error))fail;
+
+//查看病例详情
++(void)findCaseDetail:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSDictionary *dicCom))complation Fail:(void(^)(NSError *error))fail;
+
+//发布病例
++(void)postCaseWithURLString:(NSString *)url
+                  parameters:(id)parameters
+                     success:(void(^)(NSDictionary *DicPostCase))success
+                     failure:(void(^)(NSError *error))failure;
+
+//发布病例有图
++(void)CasePicWithURLString:(NSString *)url heads:(NSDictionary *)heads Parameters:(NSArray *)parameters Complation:(void(^)(NSDictionary *dicCom))complation Fail:(void(^)(NSError *error))fail;
+
+//退出群组/邀请新人
++(void)intiveNewPerson:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSNumber *code))complation Fail:(void(^)(NSError *error))fail;;
+
+//医生获取发布公告
++(void)getDoctorViedoList:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail;
+
+//医生获取住院病人列吧
++(void)doctorPostPatientList:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry,NSNumber *total))complation Fail:(void(^)(NSError *error))fail;
+
+//医生获取医嘱列表
++(void)doctorPostDocAdvice:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry,NSNumber *total))complation Fail:(void(^)(NSError *error))fail;
+
+//医生获取药品列表
++(void)doctorGetDrugList:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry,NSNumber *total))complation Fail:(void(^)(NSError *error))fail;
+
+//获取病历夹分组
++(void)getGroupListClip:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail;
+
+//获取病历夹分组具体数据
++(void)getGroupDetailListClip:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail;
+
+// 获取医院科室详细
++(void)getGroupAddressListClip:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail;
+
+//获取医生加的病例详情
++(void)getClipPersonDetail:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSArray *arry1,NSArray *arry2,NSArray *arry3))complation Fail:(void(^)(NSError *error))fail;;
+
+//钱包
+//+(void)moneyTotal:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSDictionary *dic))complation Fail:(void(^)(NSError *error))fail;
+
+//钱包列表
+//+(void)moneyTotalList:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail;
+
+//钱包类型列表
+//+(void)moneyTotalListType:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSMutableArray *arry))complation Fail:(void(^)(NSError *error))fail;
+
+//轮播图片
+//+(void)lunBo:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSArray *arry))complation Fail:(void(^)(NSError *error))fail;
+
+//未读消息数
+//+(void)getUnReadMsg:(NSString *)url Parameters:(NSDictionary *)parameters Complation:(void(^)(NSDictionary *dicData))complation Fail:(void(^)(NSError *error))fail;
+//Post
++(void)postWithURLStringALL:(NSString *)url
+                         heads:(NSDictionary *)heads
+                    parameters:(id)parameters
+                       success:(void(^)(id responseObject, BOOL ifTimeout))success
+                       failure:(void(^)(NSError *error))failure;
+//Get
++(void)getWithURLStringALL:(NSString *)url
+                     heads:(NSDictionary *)heads
+                parameters:(id)parameters
+                   success:(void(^)(id responseObject))success
+                   failure:(void(^)(NSError *error))failure;
+@end

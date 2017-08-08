@@ -1,0 +1,186 @@
+//
+//  DocAddviceSearchViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/7/11.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "DocAddviceSearchViewController.h"
+
+@interface DocAddviceSearchViewController ()<UITableViewDelegate,UITableViewDataSource>
+{
+    UITextField *_text;
+    UITableView *_tableView;
+    
+    NSMutableArray *_arryData;
+    NSInteger _tottal;
+}
+@end
+
+@implementation DocAddviceSearchViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+
+    self.automaticallyAdjustsScrollViewInsets = NO;
+    self.title = @"搜索";
+    self.view.backgroundColor = kBackgroundColor;
+    
+    _text= [[UITextField alloc]initWithFrame:CGRectMake(10, 64+10, kWith-20-70, 30)];
+    _text.placeholder = @"请根据患者姓名进行搜索";
+    _text.borderStyle = UITextBorderStyleRoundedRect;
+    _text.textAlignment = 1;
+    _text.clearButtonMode = UITextFieldViewModeAlways;
+    [self.view addSubview:_text];
+    
+    UIButton  *btnSearch = [UIButton buttonWithType:UIButtonTypeCustom];
+    btnSearch.frame = CGRectMake(kWith - 70, 64+10, 50, 30);
+    [btnSearch setTitle:@"搜索" forState:UIControlStateNormal];
+    btnSearch.backgroundColor = BLUECOLOR_STYLE;
+    btnSearch.layer.cornerRadius = 3;
+    [btnSearch addTarget:self action:@selector(onBtnSearchDocAddvice) forControlEvents:UIControlEventTouchUpInside];
+    btnSearch.layer.masksToBounds = YES;
+    [self.view addSubview:btnSearch];
+    
+    _tableView = [[UITableView alloc]initWithFrame:CGRectMake(0, 114, kWith, kHeight - 114)];
+    _tableView.dataSource = self;
+    _tableView.delegate = self;
+    _tableView.backgroundColor = [UIColor clearColor];
+    _tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    [self.view addSubview:_tableView];
+    
+    [_tableView registerClass:[UITableViewCell class] forCellReuseIdentifier:@"DocDrug"];
+}
+
+-(void)onBtnSearchDocAddvice{
+    
+    [_text resignFirstResponder];
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    [dic setObject:@(1) forKey:@"page"];
+    [dic setObject:@(20) forKey:@"rows"];
+    [dic setObject:@"" forKey:@"FuzzyName"];
+    [dic setObject:_text.text forKey:@"Name"];
+    MBProgressHUD *_HUD = [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    _HUD.mode = MBProgressHUDModeIndeterminate;
+    _HUD.labelText = @"正在加载";
+    _HUD.hidden = NO;
+    if ([self.from isEqualToString:@"drug"]) {
+        [RequestManager postWithURLStringALL:[NSString stringWithFormat:@"%@/api/Doctor/GetAdviceDrug",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:dic success:^(id responseObject, BOOL ifTimeout) {
+            
+            NSNumber *number = [(NSDictionary *)responseObject objectForKey:@"total"];
+            NSArray *arryRows = [(NSDictionary *)responseObject  objectForKey:@"rows"];
+            NSMutableArray *ArryDoc = [NSMutableArray array];
+            for (NSDictionary *dciRows in arryRows) {
+                NSMutableDictionary *doctor = [[NSMutableDictionary alloc]init];
+                for (NSString *key in [dciRows allKeys]) {
+                    [doctor setObject:[dciRows objectForKey:key] forKey:key];
+                }
+                [ArryDoc addObject:doctor];
+            }
+            
+            if (ArryDoc.count == 0 || ArryDoc == nil) {
+                kAlter(@"无结果");
+            }else{
+                _arryData = ArryDoc;
+                _tottal = [number integerValue];
+                [_tableView reloadData];
+            }
+            _HUD.hidden = YES;
+        } failure:^(NSError *error) {
+             _HUD.hidden = YES;
+        }];
+
+    }else
+    {
+        [RequestManager postWithURLStringALL:[NSString stringWithFormat:@"%@/api/Doctor/GetAdviceCheck",NET_URLSTRING] heads:DICTIONARY_VERIFYCODE parameters:dic success:^(id responseObject, BOOL ifTimeout) {
+            
+            NSNumber *number = [(NSDictionary *)responseObject objectForKey:@"total"];
+            NSArray *arryRows = [(NSDictionary *)responseObject  objectForKey:@"rows"];
+            NSMutableArray *ArryDoc = [NSMutableArray array];
+            for (NSDictionary *dciRows in arryRows) {
+                NSMutableDictionary *doctor = [[NSMutableDictionary alloc]init];
+                for (NSString *key in [dciRows allKeys]) {
+                    [doctor setObject:[dciRows objectForKey:key] forKey:key];
+                }
+                [ArryDoc addObject:doctor];
+            }
+            
+            if (ArryDoc.count == 0 || ArryDoc == nil) {
+                kAlter(@"无结果");
+            }else{
+                _arryData = ArryDoc;
+                _tottal = [number integerValue];
+                [_tableView reloadData];
+            }
+            _HUD.hidden = YES;
+        } failure:^(NSError *error) {
+            _HUD.hidden = YES;
+        }];
+    }
+}
+
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return _arryData.count;
+}
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"DocDrug" forIndexPath:indexPath];
+    cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+    NSDictionary *dic = _arryData[indexPath.row];
+    
+    cell.textLabel.font = [UIFont systemFontOfSize:14];
+    cell.textLabel.numberOfLines = 0;
+    if ([self.from isEqualToString:@"drug"]) {
+        cell.textLabel.text = [NSString stringWithFormat:@"%@    %@  %@  %@",[dic objectForKey:@"drugName"],[dic objectForKey:@"drugStandard"],[dic objectForKey:@"pharmacyUnit"],[dic objectForKey:@"price"]];
+    }
+    else
+    {
+        cell.textLabel.text = [NSString stringWithFormat:@"%@    %@",[dic objectForKey:@"itemName"],[dic objectForKey:@"dosageUnit"]];
+    }
+    
+    return cell;
+}
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    NSDictionary *dic = _arryData[indexPath.row];
+    if ([self.from isEqualToString:@"drug"]) {
+        NSMutableDictionary *dicUsfo = [NSMutableDictionary dictionary];
+        [dicUsfo setObject:[dic objectForKey:@"drugName"] forKey:@"drugName"];
+        [dicUsfo setObject:[dic objectForKey:@"drugStandard"] forKey:@"drugStandard"];
+        [dicUsfo setObject:[dic objectForKey:@"pharmacyUnit"] forKey:@"pharmacyUnit"];
+        [dicUsfo setObject:[dic objectForKey:@"price"] forKey:@"price"];
+        [dicUsfo setObject:[dic objectForKey:@"drugNumber"] forKey:@"drugNumber"];
+        [[NSNotificationCenter defaultCenter]postNotificationName:@"DocDrug" object:nil userInfo:dicUsfo];
+    }else
+    {
+        NSMutableDictionary *dicUsfo = [NSMutableDictionary dictionary];
+        [dicUsfo setObject:[dic objectForKey:@"itemName"] forKey:@"drugName"];
+        [dicUsfo setObject:[dic objectForKey:@"dosageQuantity"] forKey:@"drugStandard"];
+        [dicUsfo setObject:[dic objectForKey:@"dosageUnit"] forKey:@"pharmacyUnit"];
+        [dicUsfo setObject:[dic objectForKey:@"price"] forKey:@"price"];
+        [dicUsfo setObject:[dic objectForKey:@"itemCode"] forKey:@"drugNumber"];
+        [[NSNotificationCenter defaultCenter]postNotificationName:@"DocDrug" object:nil userInfo:dicUsfo];
+    }
+    
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

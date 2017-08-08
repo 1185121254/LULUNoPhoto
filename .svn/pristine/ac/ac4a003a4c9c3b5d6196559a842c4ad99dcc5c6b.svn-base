@@ -1,0 +1,68 @@
+
+//
+//  PublicTools.m
+//  HuaxiaDotor
+//
+//  Created by kock on 16/3/28.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "PublicTools.h"
+#import "LoginViewController.h"
+@implementation PublicTools
+
+//单利
+//+(PublicTools *)instance{
+//    static PublicTools *pub =nil;
+//    static dispatch_once_t oncet;
+//    dispatch_once(&oncet, ^{
+//        pub = [[PublicTools alloc]init];
+//    });
+//    return pub;
+//}
+
+/**
+ *  移动到登录页面
+ */
++(void)moveTologinPage
+{
+    
+    UIStoryboard *log=[UIStoryboard storyboardWithName:@" LoginView" bundle:[NSBundle mainBundle]];
+    LoginViewController *login=[log instantiateViewControllerWithIdentifier:@"LoginView"];
+    login.from = @"exit";
+    UINavigationController *currentVc=[PublicTools getCurrentVC];
+    [[currentVc.viewControllers lastObject].navigationController pushViewController:login animated:YES];
+    
+}
+
++(UINavigationController *)getCurrentVC
+{
+    UINavigationController *result=nil;
+    UIWindow *window=[[UIApplication sharedApplication] keyWindow];
+    if (window.windowLevel!=UIWindowLevelNormal)
+    {
+        NSArray *windows=[[UIApplication sharedApplication]windows];
+        for(UIWindow *topMoveWindow in windows)
+        {
+            if (topMoveWindow.windowLevel == UIWindowLevelNormal)
+            {
+                window = topMoveWindow;
+                break;
+            }
+        }
+    }
+    UIView *frontView = [[window subviews]objectAtIndex:0];
+    id nextResponder =[frontView nextResponder];
+    if ([nextResponder isKindOfClass:[UINavigationController class]])
+    {
+        UINavigationController *navigationView=(UINavigationController *)nextResponder;
+        result=navigationView;
+    }
+    else
+    {
+        result=(UINavigationController *)window.rootViewController;
+    }
+    return result;
+}
+
+@end

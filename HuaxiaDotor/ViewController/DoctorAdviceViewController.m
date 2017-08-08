@@ -1,0 +1,267 @@
+//
+//  DoctorAdviceViewController.m
+//  HuaxiaDotor
+//
+//  Created by ydz on 16/5/31.
+//  Copyright © 2016年 kock. All rights reserved.
+//
+
+#import "DoctorAdviceViewController.h"
+#import "DoctorAdviceModel.h"
+#import "DoctorAdvieTableViewCell.h"
+#import "DocPatientDetailViewController.h"
+
+@interface DoctorAdviceViewController ()<UITableViewDelegate,UITableViewDataSource>
+{
+    UITableView *_tablrView;
+    NSMutableArray *_arryData;
+    NSInteger _totalHop;
+    
+    NSDateFormatter *_dataFot;
+
+    
+}
+@end
+
+@implementation DoctorAdviceViewController
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    self.navigationController.navigationBar.hidden = NO;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"住院病人列表";
+    self.view.backgroundColor = kBackgroundColor;
+    _arryData = [NSMutableArray array];
+    _dataFot= [[NSDateFormatter alloc]init];
+    [_dataFot setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+    
+    self.automaticallyAdjustsScrollViewInsets = NO;
+    _tablrView = [[UITableView alloc]initWithFrame:CGRectMake(0, 65, kWith, kHeight - 65) style:UITableViewStyleGrouped];
+    _tablrView.backgroundColor = [UIColor clearColor];
+    _tablrView.delegate = self;
+    _tablrView.rowHeight = 65;
+    _tablrView.dataSource = self;
+    [self.view addSubview:_tablrView];
+    
+    [_tablrView registerClass:[DoctorAdvieTableViewCell class] forCellReuseIdentifier:@"DocAdvice"];
+    
+    NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+    [dic setObject:@"1" forKey:@"page"];
+    [dic setObject:@"10" forKey:@"rows"];
+
+    _arryData = [NSMutableArray array];
+    [self getData:dic URL:[NSString stringWithFormat:@"%@/api/Doctor/GetAdvicePatient",NET_URLSTRING]];
+    
+    __weak DoctorAdviceViewController *weakSelf = self;
+    _tablrView.mj_header = [MJRefreshNormalHeader headerWithRefreshingBlock:^{
+        [weakSelf updateData:1];
+    }];
+    
+    _tablrView.mj_footer = [MJRefreshBackNormalFooter footerWithRefreshingBlock:^{
+        [weakSelf updateData:2];
+    }];
+}
+
+-(void)dealloc{
+
+}
+
+-(void)getData:(NSDictionary *)dic URL:(NSString *)url{
+    
+
+   [RequestManager postWithURLStringALL:url heads:DICTIONARY_VERIFYCODE parameters:dic viewConroller:self success:^(id responseObject, BOOL ifTimeout) {
+       
+       NSMutableArray *arr = [self detailWithData:(NSDictionary *)responseObject];
+       
+       if (arr == nil || arr.count == 0) {
+           self.noData.hidden = NO;
+           self.noData.frame = CGRectMake(0, (kHeight-60)/2, kWith, 60);
+       }else
+       {
+           self.noData.hidden = YES;
+       }
+       for (DoctorAdviceModel *model in arr) {
+           [_arryData addObject:model];
+       }
+       [_tablrView reloadData];
+
+       
+   } failure:^(NSError *error) {
+
+   }];
+}
+
+-(NSMutableArray *)detailWithData:(NSDictionary *)dicValue{
+    _totalHop = [[dicValue objectForKey:@"total"] integerValue];
+    NSArray *arryRows = [dicValue objectForKey:@"rows"];
+    NSMutableArray *arryDoc = [NSMutableArray array];
+    for (NSDictionary *dciRows in arryRows) {
+        DoctorAdviceModel *doctor = [[DoctorAdviceModel alloc]init];
+        for (NSString *key in [dciRows allKeys]) {
+            [doctor setValue:[dciRows objectForKey:key] forKey:key];
+        }
+        [arryDoc addObject:doctor];
+    }
+    return  arryDoc;
+}
+
+#pragma mark-------下拉刷新
+
+-(void)updateData:(NSInteger)page{
+    
+    static NSInteger i = 1;
+    if (page == 1) {
+        //下拉刷新
+        i = 1;
+        [_tablrView.mj_footer resetNoMoreData];
+        NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+        [dic setObject:[NSString stringWithFormat:@"%ld",i] forKey:@"page"];
+        [dic setObject:@"10" forKey:@"rows"];
+        
+        _arryData = [NSMutableArray array];
+        [self getData:dic URL:[NSString stringWithFormat:@"%@/api/Doctor/GetAdvicePatient",NET_URLSTRING]];
+        
+    }else
+    {
+        //上推加载
+        if (_arryData.count >= _totalHop) {
+            [_tablrView.mj_footer endRefreshingWithNoMoreData];
+            return;
+        }
+        else
+        {
+            i++;
+            NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+            [dic setObject:[NSString stringWithFormat:@"%ld",i] forKey:@"page"];
+            [dic setObject:@"10" forKey:@"rows"];
+            [dic setObject:@"" forKey:@"FuzzyName"];
+            [self getData:dic URL:[NSString stringWithFormat:@"%@/api/Doctor/GetAdvicePatient",NET_URLSTRING]];
+
+        }
+    }
+    [_tablrView.mj_header endRefreshing];
+    [_tablrView.mj_footer endRefreshing];
+}
+
+-(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return _arryData.count;
+}
+
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return 1;
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    return 5;
+}
+
+-(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 40;
+}
+
+-(UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+
+    UIView *view = [[UIView alloc]initWithFrame:CGRectMake(0, 0, kWith, 40)];
+    view.backgroundColor = [UIColor  whiteColor];
+    UILabel *lbl = [[UILabel alloc]initWithFrame:CGRectMake(20, 0, kWith - 40, 40)];
+    if (_arryData.count>0) {
+        DoctorAdviceModel *model = _arryData[section];
+        lbl.attributedText = [self setText:[NSString stringWithFormat:@"%@  %@岁",model.patientName,[self setAge:model.patientBirt]]];
+    }
+
+    [view addSubview:lbl];
+    
+    UIControl *control =[[UIControl alloc]initWithFrame:view.frame];
+    [control addTarget:self action:@selector(onConTron:) forControlEvents:UIControlEventTouchUpInside];
+    control.tag = section+350;
+    [view addSubview:control];
+    
+    return view;
+}
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+
+    DoctorAdvieTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"DocAdvice" forIndexPath:indexPath];
+    if (_arryData.count>0) {
+        DoctorAdviceModel *model = _arryData[indexPath.section];
+        cell.lblMuBedNum.text = model.bedNumber;
+        cell.lblMuHospicalNum.text = model.hisHospitalized;
+        cell.lblMuPropertyNum.text = model.chargeName;
+        cell.lblMuArrears.text = [self setArrears:model.moneyCost LeftMoney:model.moneyLeft];
+    }
+    return cell;
+}
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    
+    DoctorAdviceModel *model = _arryData[indexPath.section];
+    //医嘱
+    DocPatientDetailViewController *patient = [[DocPatientDetailViewController alloc]init];
+    patient.docModel = model;
+    [self.navigationController pushViewController:patient animated:YES];
+}
+
+-(void)onConTron:(UIControl *)control{
+    
+    DoctorAdviceModel *model = _arryData[control.tag-350];
+    //医嘱
+    DocPatientDetailViewController *patient = [[DocPatientDetailViewController alloc]init];
+    patient.docModel = model;
+    [self.navigationController pushViewController:patient animated:YES];
+    
+}
+
+#pragma mark--------辅助方法
+-(NSMutableAttributedString *)setText:(NSString *)text{
+    
+    NSArray *arry = [text componentsSeparatedByString:@"  "];
+    NSString *strUnit = arry[1];
+    
+    NSMutableAttributedString *medStr = [[NSMutableAttributedString alloc]initWithString:text];
+    [medStr addAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:13]} range:[text rangeOfString:strUnit]];
+    return medStr;
+}
+
+-(NSString *)setAge:(NSString *)birstday{
+
+    NSDate *birdayDate = [_dataFot dateFromString:birstday];
+    long long birdayUnit = [birdayDate timeIntervalSince1970];
+    long long nowUnit = [[NSDate date] timeIntervalSince1970];
+    long long ageUnit = nowUnit - birdayUnit;
+    NSInteger age = ageUnit/365/24/60/60;
+
+    return [NSString stringWithFormat:@"%ld",age];
+}
+
+-(NSString *)setArrears:(NSString *)moneyCost LeftMoney:(NSString *)moneyLeft{
+
+    NSInteger Cost = [moneyCost integerValue];
+    NSInteger Lefy = [moneyLeft integerValue];
+    if (Cost - Lefy < 0) {
+        return @"是";
+    }else
+    {
+        return @"否";
+    }
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end
